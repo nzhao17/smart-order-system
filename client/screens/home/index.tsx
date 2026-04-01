@@ -1,211 +1,192 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 
-// 配色方案 - 柔和卡片风
+// 商务风格配色
 const COLORS = {
-  primary: '#6C63FF',
-  primaryGradient: '#896BFF',
-  secondary: '#FF6584',
-  background: '#F0F0F3',
-  card: '#F0F0F3',
-  shadowDark: '#D1D9E6',
-  shadowLight: '#FFFFFF',
-  textPrimary: '#2D3436',
-  textSecondary: '#636E72',
-  success: '#00B894',
-  surface: '#E8E8EB',
+  primary: '#002FA7',      // 克莱因蓝
+  primaryDark: '#001F7A',  // 深蓝
+  accent: '#C9A96E',       // 香槟金
+  background: '#F8F6F2',   // 米金白
+  card: '#FFFFFF',
+  textPrimary: '#1A1A2E',  // 深蓝黑
+  textSecondary: '#6B7280',
+  textLight: '#FFFFFF',
+  border: 'rgba(201, 169, 110, 0.3)',
 };
 
 export default function HomeScreen() {
   const router = useSafeRouter();
 
   return (
-    <Screen style={{ backgroundColor: COLORS.background }}>
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingHorizontal: 24,
-          paddingTop: 20,
-          paddingBottom: 120,
-        }}
-      >
-        {/* 顶部标题区域 */}
-        <View style={{ marginTop: 20, marginBottom: 40 }}>
-          <Text style={{ fontSize: 28, fontWeight: '800', color: COLORS.textPrimary }}>
-            智能录单系统
-          </Text>
-          <Text style={{ fontSize: 14, color: COLORS.textSecondary, marginTop: 8 }}>
-            旅行社订单管理，一键录入更高效
-          </Text>
+    <Screen style={styles.container}>
+      {/* 主内容区域 */}
+      <View style={styles.content}>
+        {/* 标题区域 */}
+        <View style={styles.headerSection}>
+          <View style={styles.decorativeLine} />
+          <Text style={styles.title}>智能录单系统</Text>
+          <View style={styles.decorativeLine} />
         </View>
 
-        {/* 功能入口卡片 */}
-        <View style={{ gap: 20 }}>
-          {/* 订单录入入口 */}
+        {/* 功能按钮区域 */}
+        <View style={styles.buttonContainer}>
+          {/* 订单录入按钮 */}
           <TouchableOpacity
+            style={styles.primaryButton}
             activeOpacity={0.9}
             onPress={() => router.push('/order-entry')}
           >
-            <View
-              style={{
-                backgroundColor: COLORS.card,
-                borderRadius: 24,
-                padding: 24,
-                flexDirection: 'row',
-                alignItems: 'center',
-              }}
-            >
-              <View
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 32,
-                  backgroundColor: 'rgba(108,99,255,0.12)',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <Ionicons name="add-circle" size={28} color={COLORS.primary} />
-              </View>
-              <View style={{ flex: 1, marginLeft: 16 }}>
-                <Text
-                  style={{ fontSize: 18, fontWeight: '700', color: COLORS.textPrimary }}
-                >
-                  订单录入
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 13,
-                    color: COLORS.textSecondary,
-                    marginTop: 4,
-                  }}
-                >
-                  支持文本粘贴、图片上传、Excel导入
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
+            <View style={styles.buttonIconWrapper}>
+              <Ionicons name="add-circle-outline" size={32} color={COLORS.textLight} />
             </View>
+            <Text style={styles.primaryButtonText}>订单录入</Text>
+            <Text style={styles.buttonSubtext}>文本 · 图片 · Excel</Text>
           </TouchableOpacity>
 
-          {/* 订单统计入口 */}
+          {/* 订单统计按钮 */}
           <TouchableOpacity
+            style={styles.secondaryButton}
             activeOpacity={0.9}
             onPress={() => router.push('/order-list')}
           >
-            <View
-              style={{
-                backgroundColor: COLORS.card,
-                borderRadius: 24,
-                padding: 24,
-                flexDirection: 'row',
-                alignItems: 'center',
-              }}
-            >
-              <View
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 32,
-                  backgroundColor: 'rgba(255,101,132,0.12)',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <Ionicons name="stats-chart" size={28} color={COLORS.secondary} />
-              </View>
-              <View style={{ flex: 1, marginLeft: 16 }}>
-                <Text
-                  style={{ fontSize: 18, fontWeight: '700', color: COLORS.textPrimary }}
-                >
-                  订单统计
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 13,
-                    color: COLORS.textSecondary,
-                    marginTop: 4,
-                  }}
-                >
-                  查看订单列表、筛选、详情
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
+            <View style={styles.secondaryIconWrapper}>
+              <Ionicons name="stats-chart-outline" size={32} color={COLORS.primary} />
             </View>
+            <Text style={styles.secondaryButtonText}>订单统计</Text>
+            <Text style={styles.secondarySubtext}>列表 · 筛选 · 详情</Text>
           </TouchableOpacity>
         </View>
+      </View>
 
-        {/* 功能说明 */}
-        <View style={{ marginTop: 40 }}>
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: '700',
-              color: COLORS.textPrimary,
-              marginBottom: 16,
-            }}
-          >
-            功能特点
-          </Text>
-          <View style={{ gap: 12 }}>
-            <FeatureItem
-              icon="bulb"
-              title="智能解析"
-              description="自动识别文本、图片中的订单信息"
-              color={COLORS.primary}
-            />
-            <FeatureItem
-              icon="document-text"
-              title="批量导入"
-              description="支持Excel表格批量上传订单数据"
-              color={COLORS.success}
-            />
-            <FeatureItem
-              icon="share-social"
-              title="共享录入"
-              description="生成链接，多人协作录入订单"
-              color={COLORS.secondary}
-            />
-          </View>
-        </View>
-      </ScrollView>
+      {/* 底部装饰 */}
+      <View style={styles.footer}>
+        <View style={styles.footerLine} />
+        <Text style={styles.footerText}>旅行社订单管理系统</Text>
+        <View style={styles.footerLine} />
+      </View>
     </Screen>
   );
 }
 
-function FeatureItem({
-  icon,
-  title,
-  description,
-  color,
-}: {
-  icon: 'bulb' | 'document-text' | 'share-social';
-  title: string;
-  description: string;
-  color: string;
-}) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <View
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          backgroundColor: color + '15',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <Ionicons name={icon} size={18} color={color} />
-      </View>
-      <View style={{ marginLeft: 12 }}>
-        <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.textPrimary }}>
-          {title}
-        </Text>
-        <Text style={{ fontSize: 12, color: COLORS.textSecondary }}>{description}</Text>
-      </View>
-    </View>
-  );
-}
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: 60,
+  },
+  decorativeLine: {
+    width: 60,
+    height: 1,
+    backgroundColor: COLORS.accent,
+    marginVertical: 20,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    letterSpacing: 8,
+    textAlign: 'center',
+  },
+  buttonContainer: {
+    width: '100%',
+    gap: 20,
+  },
+  primaryButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 4,
+    paddingVertical: 28,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  buttonIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  primaryButtonText: {
+    color: COLORS.textLight,
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: 6,
+    marginBottom: 4,
+  },
+  buttonSubtext: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    letterSpacing: 2,
+  },
+  secondaryButton: {
+    backgroundColor: COLORS.card,
+    borderRadius: 4,
+    paddingVertical: 28,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  secondaryIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0,47,167,0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  secondaryButtonText: {
+    color: COLORS.primary,
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: 6,
+    marginBottom: 4,
+  },
+  secondarySubtext: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    letterSpacing: 2,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 40,
+    paddingHorizontal: 32,
+  },
+  footerLine: {
+    flex: 1,
+    height: 0.5,
+    backgroundColor: COLORS.accent,
+  },
+  footerText: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    letterSpacing: 2,
+    marginHorizontal: 16,
+  },
+});
