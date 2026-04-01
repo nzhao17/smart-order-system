@@ -19,10 +19,13 @@ export default function RootLayout() {
           animation: 'slide_from_right',
           gestureEnabled: true,
           gestureDirection: 'horizontal',
-          headerShown: false
+          headerShown: false,
         }}
       >
-        <Stack.Screen name="index" options={{ title: "" }} />
+        <Stack.Screen name="index" options={{ title: '智能录单系统' }} />
+        <Stack.Screen name="order-entry" options={{ title: '订单录入' }} />
+        <Stack.Screen name="order-list" options={{ title: '订单统计' }} />
+        <Stack.Screen name="order-detail" options={{ title: '订单详情' }} />
       </Stack>
       <Toast />
     </Provider>
