@@ -32,7 +32,6 @@ const COLORS = {
   success: '#059669',
   surface: '#F3F4F6',
   error: '#DC2626',
-  warning: '#D97706',
   border: 'rgba(201, 169, 110, 0.3)',
 };
 
@@ -84,6 +83,7 @@ export default function OrderListScreen() {
   const [loading, setLoading] = useState(true);
   const [todayStats, setTodayStats] = useState({ date: '', totalOrders: 0 });
   const [filterVisible, setFilterVisible] = useState(false);
+  const [isFilteredToday, setIsFilteredToday] = useState(false);
   const [filters, setFilters] = useState<Filters>({
     date_from: '',
     date_to: '',
@@ -104,7 +104,7 @@ export default function OrderListScreen() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // 获取今日统计
-  const fetchTodayStats = async () => {
+  const fetchTodayStats = useCallback(async () => {
     try {
       const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/orders/stats/today`);
       const result = await response.json();
@@ -114,10 +114,10 @@ export default function OrderListScreen() {
     } catch (err) {
       console.error('获取统计失败:', err);
     }
-  };
+  }, []);
 
   // 获取订单列表
-  const fetchOrders = async (customFilters?: Filters) => {
+  const fetchOrders = useCallback(async (customFilters?: Filters) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -150,14 +150,14 @@ export default function OrderListScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
   // 页面聚焦时刷新数据
   useFocusEffect(
     useCallback(() => {
       fetchTodayStats();
       fetchOrders();
-    }, [filters])
+    }, [fetchTodayStats, fetchOrders])
   );
 
   // 删除订单
@@ -190,22 +190,39 @@ export default function OrderListScreen() {
     ]);
   };
 
-  // 点击今日订单筛选今日订单
-  const filterToday = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const todayFilters: Filters = { ...filters, date_from: today, date_to: today };
-    setTempFilters(todayFilters);
-    setFilters(todayFilters);
+  // 点击今日订单筛选/取消筛选
+  const toggleTodayFilter = () => {
+    if (isFilteredToday) {
+      // 已筛选今日，取消筛选显示全部
+      setIsFilteredToday(false);
+      const emptyFilters: Filters = {
+        date_from: '',
+        date_to: '',
+        group_no: '',
+        station: '',
+        pickup_type: '',
+        dispatcher: '',
+        driver: '',
+        train_no: '',
+        train_time: '',
+        time_remark: '',
+        guest_name: '',
+        phone: '',
+        people_count: '',
+        hotel: '',
+      };
+      setFilters(emptyFilters);
+    } else {
+      // 筛选今日订单
+      const today = new Date().toISOString().split('T')[0];
+      const todayFilters: Filters = { ...filters, date_from: today, date_to: today };
+      setFilters(todayFilters);
+      setIsFilteredToday(true);
+    }
   };
 
-  // 应用筛选
-  const applyFilters = () => {
-    setFilters(tempFilters);
-    setFilterVisible(false);
-  };
-
-  // 清除筛选
-  const clearFilters = () => {
+  // 重置筛选
+  const resetFilters = () => {
     const emptyFilters: Filters = {
       date_from: '',
       date_to: '',
@@ -223,6 +240,15 @@ export default function OrderListScreen() {
       hotel: '',
     };
     setTempFilters(emptyFilters);
+    setFilters(emptyFilters);
+    setIsFilteredToday(false);
+  };
+
+  // 应用筛选
+  const applyFilters = () => {
+    setFilters(tempFilters);
+    setIsFilteredToday(false);
+    setFilterVisible(false);
   };
 
   // 格式化日期显示
@@ -254,12 +280,12 @@ export default function OrderListScreen() {
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}>
         {/* 今日统计卡片 */}
-        <TouchableOpacity onPress={filterToday} activeOpacity={0.8}>
-          <View style={styles.statsCard}>
+        <TouchableOpacity onPress={toggleTodayFilter} activeOpacity={0.8}>
+          <View style={[styles.statsCard, isFilteredToday && { backgroundColor: COLORS.primaryDark }]}>
             <View style={styles.statsContent}>
-              <Text style={styles.statsLabel}>今日订单数</Text>
-              <Text style={styles.statsNumber}>{todayStats.totalOrders}</Text>
-              <Text style={styles.statsDate}>{todayStats.date}</Text>
+              <Text style={styles.statsLabel}>{isFilteredToday ? '当前筛选' : '今日订单数'}</Text>
+              <Text style={styles.statsNumber}>{isFilteredToday ? orders.length : todayStats.totalOrders}</Text>
+              <Text style={styles.statsDate}>{isFilteredToday ? '点击查看全部' : todayStats.date}</Text>
             </View>
             <View style={styles.statsIcon}>
               <Ionicons name="clipboard-outline" size={32} color={COLORS.accent} />
@@ -269,7 +295,12 @@ export default function OrderListScreen() {
 
         {/* 筛选按钮 */}
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>订单列表</Text>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
+              <Ionicons name="refresh-outline" size={16} color={COLORS.textSecondary} />
+              <Text style={styles.resetButtonText}>重置</Text>
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity
             style={[styles.filterButton, hasActiveFilters() && { backgroundColor: COLORS.primary }]}
             onPress={() => { setTempFilters(filters); setFilterVisible(true); }}
@@ -300,10 +331,12 @@ export default function OrderListScreen() {
                     <Ionicons name="calendar-outline" size={14} color={COLORS.primary} />
                     <Text style={styles.orderDateText}>{formatDate(order.order_date)}</Text>
                   </View>
-                  <View style={[styles.pickupTypeBadge, 
+                  <View style={[
+                    styles.pickupTypeBadge, 
                     order.pickup_type === '接站' ? { backgroundColor: 'rgba(5,150,105,0.1)' } : { backgroundColor: 'rgba(220,38,38,0.1)' }
                   ]}>
-                    <Text style={[styles.pickupTypeText,
+                    <Text style={[
+                      styles.pickupTypeText,
                       order.pickup_type === '接站' ? { color: COLORS.success } : { color: COLORS.error }
                     ]}>{order.pickup_type || '-'}</Text>
                   </View>
@@ -340,7 +373,7 @@ export default function OrderListScreen() {
                 </View>
               </TouchableOpacity>
 
-              {/* 删除按钮 */}
+              {/* 删除按钮 - 移到底部 */}
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={() => deleteOrder(order.id)}
@@ -349,7 +382,10 @@ export default function OrderListScreen() {
                 {deletingId === order.id ? (
                   <ActivityIndicator size="small" color={COLORS.error} />
                 ) : (
-                  <Ionicons name="trash-outline" size={18} color={COLORS.error} />
+                  <>
+                    <Ionicons name="trash-outline" size={16} color={COLORS.error} />
+                    <Text style={styles.deleteButtonText}>删除</Text>
+                  </>
                 )}
               </TouchableOpacity>
             </View>
@@ -434,7 +470,8 @@ export default function OrderListScreen() {
 
                 <View style={styles.filterSection}>
                   <Text style={styles.filterSectionTitle}>其他信息</Text>
-                  <FilterInput label="人数" value={tempFilters.people_count} placeholder="请输入人数" keyboardType="numeric"
+                  <FilterInput label="人数" value={tempFilters.people_count} placeholder="请输入人数"
+                    keyboardType="numeric"
                     onChange={(v) => setTempFilters({ ...tempFilters, people_count: v })} />
                   <FilterInput label="宾馆" value={tempFilters.hotel} placeholder="请输入宾馆名称"
                     onChange={(v) => setTempFilters({ ...tempFilters, hotel: v })} />
@@ -443,7 +480,7 @@ export default function OrderListScreen() {
 
               {/* 操作按钮 */}
               <View style={styles.modalFooter}>
-                <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
+                <TouchableOpacity style={styles.clearButton} onPress={resetFilters}>
                   <Text style={styles.clearButtonText}>清除筛选</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
@@ -464,7 +501,7 @@ function FilterInput({ label, value, placeholder, onChange, keyboardType }: {
   value: string;
   placeholder: string;
   onChange: (v: string) => void;
-  keyboardType?: 'numeric' | 'default';
+  keyboardType?: 'numeric' | 'phone-pad' | 'decimal-pad' | 'default';
 }) {
   return (
     <View style={{ marginBottom: 12 }}>
@@ -575,10 +612,21 @@ const styles = {
     alignItems: 'center' as const,
     marginBottom: 16,
   },
-  listTitle: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: COLORS.textPrimary,
+  resetButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  resetButtonText: {
+    color: COLORS.textSecondary,
+    fontWeight: '500' as const,
+    fontSize: 14,
   },
   filterButton: {
     flexDirection: 'row' as const,
@@ -607,14 +655,12 @@ const styles = {
     marginTop: 12,
   },
   orderCard: {
-    flexDirection: 'row' as const,
     backgroundColor: COLORS.card,
     borderRadius: 4,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
-    alignItems: 'flex-start' as const,
   },
   orderHeader: {
     flexDirection: 'row' as const,
@@ -669,13 +715,19 @@ const styles = {
     fontSize: 13,
   },
   deleteButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 4,
-    backgroundColor: 'rgba(220,38,38,0.08)',
-    justifyContent: 'center' as const,
+    flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    marginLeft: 12,
+    justifyContent: 'center' as const,
+    gap: 6,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  deleteButtonText: {
+    color: COLORS.error,
+    fontWeight: '500' as const,
+    fontSize: 14,
   },
   modalOverlay: {
     flex: 1,

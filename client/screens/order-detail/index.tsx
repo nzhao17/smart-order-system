@@ -213,18 +213,40 @@ export default function OrderDetailScreen() {
     ]);
   };
 
+  // 加载中状态
   if (loading) {
     return (
-      <Screen style={{ backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <Screen style={{ backgroundColor: COLORS.background }}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={24} color={COLORS.primary} />
+            <Text style={styles.backText}>返回</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>订单详情</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
       </Screen>
     );
   }
 
+  // 订单不存在
   if (!order) {
     return (
-      <Screen style={{ backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: COLORS.textSecondary }}>订单不存在</Text>
+      <Screen style={{ backgroundColor: COLORS.background }}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={24} color={COLORS.primary} />
+            <Text style={styles.backText}>返回</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>订单详情</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={{ color: COLORS.textSecondary }}>订单不存在</Text>
+        </View>
       </Screen>
     );
   }
@@ -248,7 +270,10 @@ export default function OrderDetailScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}>
+          <ScrollView 
+            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* 接送站类型选择 */}
             <View style={styles.pickupTypeSection}>
               {['接站', '送站'].map((type) => (
@@ -403,6 +428,11 @@ const styles = {
     height: 36,
     borderRadius: 4,
     backgroundColor: 'rgba(220,38,38,0.08)',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
   },

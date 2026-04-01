@@ -267,6 +267,7 @@ export default function OrderEntryScreen() {
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
       >
         {/* 输入方式选择 */}
         <View style={styles.modeContainer}>
@@ -298,7 +299,7 @@ export default function OrderEntryScreen() {
               <View style={styles.textInputWrapper}>
                 <TextInput
                   style={styles.textInput}
-                  placeholder="粘贴订单信息，如：更新-明日4月1日到京陆加文5人接站信息G56北京南15:27..."
+                  placeholder=""
                   placeholderTextColor={COLORS.placeholder}
                   multiline
                   value={textInput}
@@ -430,7 +431,7 @@ export default function OrderEntryScreen() {
                   </TouchableOpacity>
                 </View>
 
-                <ScrollView style={styles.modalBody}>
+                <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
                   <EditField label="时间" value={editingOrder.order_date || ''} 
                     onChange={(v) => setEditingOrder({ ...editingOrder, order_date: v })} />
                   <EditField label="团号" value={editingOrder.group_no || ''} 
