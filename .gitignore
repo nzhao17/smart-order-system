@@ -1,12 +1,41 @@
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Build outputs
 dist/
 build/
 .expo/
 .expo-shared/
-.eslintcache
+web-build/
+
+# Environment files (重要！不要上传环境变量)
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Expo
 expo/expo-env.d.ts
 expo-env.d.ts
-.DS_Store
-logs/
+.eslintcache
 *.tsbuildinfo
 node-compile-cache/
