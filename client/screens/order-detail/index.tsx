@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -463,14 +463,15 @@ function FormInput({ label, value, placeholder, onChange, multiline, keyboardTyp
   );
 }
 
-// 日期选择输入组件
+// 日期选择输入组件 - 兼容 Web 和移动端
 function FormDateInput({ label, value, onChange }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
 }) {
   const [show, setShow] = useState(false);
-  
+  const inputRef = useRef<any>(null);
+
   const handleChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS !== 'ios') {
       setShow(false);
@@ -481,16 +482,40 @@ function FormDateInput({ label, value, onChange }: {
     }
   };
 
-  const openPicker = () => {
-    setShow(true);
-  };
+  // Web 端使用原生 input
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.formField}>
+        <Text style={styles.formLabel}>{label}</Text>
+        <View style={styles.pickerInput}>
+          <input
+            ref={inputRef}
+            type="date"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            style={{
+              flex: 1,
+              borderWidth: 0,
+              backgroundColor: 'transparent',
+              fontSize: 14,
+              color: '#1A1A2E',
+              outline: 'none',
+              padding: 0,
+            }}
+          />
+          <Ionicons name="calendar-outline" size={20} color={COLORS.textSecondary} />
+        </View>
+      </View>
+    );
+  }
 
+  // 移动端使用 DateTimePicker
   return (
     <View style={styles.formField}>
       <Text style={styles.formLabel}>{label}</Text>
       <TouchableOpacity 
         style={styles.pickerInput} 
-        onPress={openPicker}
+        onPress={() => setShow(true)}
         activeOpacity={0.7}
       >
         <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>
@@ -510,7 +535,7 @@ function FormDateInput({ label, value, onChange }: {
   );
 }
 
-// 时间选择输入组件
+// 时间选择输入组件 - 兼容 Web 和移动端
 function FormTimeInput({ label, value, onChange }: {
   label: string;
   value: string;
@@ -540,16 +565,39 @@ function FormTimeInput({ label, value, onChange }: {
     return date;
   };
 
-  const openPicker = () => {
-    setShow(true);
-  };
+  // Web 端使用原生 input
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.formField}>
+        <Text style={styles.formLabel}>{label}</Text>
+        <View style={styles.pickerInput}>
+          <input
+            type="time"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            style={{
+              flex: 1,
+              borderWidth: 0,
+              backgroundColor: 'transparent',
+              fontSize: 14,
+              color: '#1A1A2E',
+              outline: 'none',
+              padding: 0,
+            }}
+          />
+          <Ionicons name="time-outline" size={20} color={COLORS.textSecondary} />
+        </View>
+      </View>
+    );
+  }
 
+  // 移动端使用 DateTimePicker
   return (
     <View style={styles.formField}>
       <Text style={styles.formLabel}>{label}</Text>
       <TouchableOpacity 
         style={styles.pickerInput} 
-        onPress={openPicker}
+        onPress={() => setShow(true)}
         activeOpacity={0.7}
       >
         <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -566,7 +566,7 @@ function EditField({ label, value, onChange, multiline, keyboardType, placeholde
   );
 }
 
-// 日期选择字段
+// 日期选择字段 - 兼容 Web 和移动端
 function EditDateField({ label, value, onChange }: {
   label: string;
   value: string;
@@ -584,16 +584,39 @@ function EditDateField({ label, value, onChange }: {
     }
   };
 
-  const openPicker = () => {
-    setShow(true);
-  };
+  // Web 端使用原生 input
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.editField}>
+        <Text style={styles.editLabel}>{label}</Text>
+        <View style={styles.pickerInput}>
+          <input
+            type="date"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            style={{
+              flex: 1,
+              borderWidth: 0,
+              backgroundColor: 'transparent',
+              fontSize: 14,
+              color: '#1A1A2E',
+              outline: 'none',
+              padding: 0,
+            }}
+          />
+          <Ionicons name="calendar-outline" size={20} color={COLORS.textSecondary} />
+        </View>
+      </View>
+    );
+  }
 
+  // 移动端使用 DateTimePicker
   return (
     <View style={styles.editField}>
       <Text style={styles.editLabel}>{label}</Text>
       <TouchableOpacity 
         style={styles.pickerInput} 
-        onPress={openPicker}
+        onPress={() => setShow(true)}
         activeOpacity={0.7}
       >
         <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>
@@ -613,7 +636,7 @@ function EditDateField({ label, value, onChange }: {
   );
 }
 
-// 时间选择字段
+// 时间选择字段 - 兼容 Web 和移动端
 function EditTimeField({ label, value, onChange }: {
   label: string;
   value: string;
@@ -644,16 +667,39 @@ function EditTimeField({ label, value, onChange }: {
     return date;
   };
 
-  const openPicker = () => {
-    setShow(true);
-  };
+  // Web 端使用原生 input
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.editField}>
+        <Text style={styles.editLabel}>{label}</Text>
+        <View style={styles.pickerInput}>
+          <input
+            type="time"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            style={{
+              flex: 1,
+              borderWidth: 0,
+              backgroundColor: 'transparent',
+              fontSize: 14,
+              color: '#1A1A2E',
+              outline: 'none',
+              padding: 0,
+            }}
+          />
+          <Ionicons name="time-outline" size={20} color={COLORS.textSecondary} />
+        </View>
+      </View>
+    );
+  }
 
+  // 移动端使用 DateTimePicker
   return (
     <View style={styles.editField}>
       <Text style={styles.editLabel}>{label}</Text>
       <TouchableOpacity 
         style={styles.pickerInput} 
-        onPress={openPicker}
+        onPress={() => setShow(true)}
         activeOpacity={0.7}
       >
         <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>

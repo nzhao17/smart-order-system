@@ -727,7 +727,7 @@ function FilterSelect({ label, value, options, onChange }: {
   );
 }
 
-// 筛选日期选择器
+// 筛选日期选择器 - 兼容 Web 和移动端
 function FilterDateInput({ value, onChange }: {
   value: string;
   onChange: (v: string) => void;
@@ -735,18 +735,47 @@ function FilterDateInput({ value, onChange }: {
   const [show, setShow] = useState(false);
   
   const handleChange = (event: any, selectedDate?: Date) => {
-    setShow(Platform.OS === 'ios');
+    if (Platform.OS !== 'ios') {
+      setShow(false);
+    }
     if (selectedDate) {
       const formatted = selectedDate.toISOString().split('T')[0];
       onChange(formatted);
     }
   };
 
+  // Web 端使用原生 input
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ marginBottom: 0 }}>
+        <View style={[styles.filterInput, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }]}>
+          <input
+            type="date"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            style={{
+              flex: 1,
+              borderWidth: 0,
+              backgroundColor: 'transparent',
+              fontSize: 14,
+              color: '#1A1A2E',
+              outline: 'none',
+              padding: 0,
+            }}
+          />
+          <Ionicons name="calendar-outline" size={18} color={COLORS.textSecondary} />
+        </View>
+      </View>
+    );
+  }
+
+  // 移动端使用 DateTimePicker
   return (
     <View style={{ marginBottom: 0 }}>
       <TouchableOpacity 
         style={[styles.filterInput, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }]} 
         onPress={() => setShow(true)}
+        activeOpacity={0.7}
       >
         <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>
           {value || '选择日期'}
