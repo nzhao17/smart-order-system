@@ -5,6 +5,78 @@ import type { InsertOrder } from '../storage/database/shared/schema';
 const config = new Config();
 
 /**
+ * 计算送站时间备注
+ * - 机场提前3小时
+ * - 火车站提前2小时
+ * - 接站时与班次时间相同
+ */
+function calculateTimeRemark(pickupType: string, station: string, trainTime: string): string | null {
+  if (!trainTime) return null;
+  
+  // 接站时，时间备注与班次时间相同
+  if (pickupType === '接站') {
+    return trainTime;
+  }
+  
+  // 送站时，计算提前时间
+  if (pickupType === '送站') {
+    const [hours, minutes] = trainTime.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return null;
+    
+    const trainDate = new Date();
+    trainDate.setHours(hours, minutes, 0, 0);
+    
+    // 判断场站类型
+    const isAirport = station && station.includes('机场');
+    const isStation = station && station.includes('站');
+    
+    let pickupDate = new Date(trainDate);
+    if (isAirport) {
+      // 机场提前3小时
+      pickupDate.setHours(pickupDate.getHours() - 3);
+    } else if (isStation) {
+      // 火车站提前2小时
+      pickupDate.setHours(pickupDate.getHours() - 2);
+    } else {
+      // 默认提前2小时
+      pickupDate.setHours(pickupDate.getHours() - 2);
+    }
+    
+    const pickupHours = pickupDate.getHours().toString().padStart(2, '0');
+    const pickupMinutes = pickupDate.getMinutes().toString().padStart(2, '0');
+    return `${pickupHours}:${pickupMinutes}`;
+  }
+  
+  return null;
+}
+
+/**
+ * 处理订单数据，自动填充时间备注
+ */
+function processOrderTimeRemark(order: any): InsertOrder {
+  const result = { ...order };
+  
+  // 如果已有时间备注，保留原值
+  if (result.time_remark) {
+    return result;
+  }
+  
+  // 如果有班次时间和接送站类型，计算时间备注
+  if (result.train_time && result.pickup_type) {
+    const timeRemark = calculateTimeRemark(
+      result.pickup_type,
+      result.station || '',
+      result.train_time
+    );
+    if (timeRemark) {
+      result.time_remark = timeRemark;
+    }
+  }
+  
+  return result;
+}
+
+/**
  * 解析文本，提取订单关键字段
  * 使用LLM智能提取
  */
@@ -58,7 +130,7 @@ export async function parseTextToOrder(text: string): Promise<InsertOrder[]> {
     if (!Array.isArray(orders)) {
       return [orders];
     }
-    return orders.map((order: any) => ({
+    return orders.map((order: any) => processOrderTimeRemark({
       ...order,
       source: 'text',
       raw_content: text,
@@ -133,7 +205,7 @@ export async function parseImageToOrder(imageBase64: string): Promise<InsertOrde
     if (!Array.isArray(orders)) {
       return [orders];
     }
-    return orders.map((order: any) => ({
+    return orders.map((order: any) => processOrderTimeRemark({
       ...order,
       source: 'image',
     }));
@@ -219,8 +291,8 @@ export async function parseExcelToOrder(buffer: Buffer): Promise<InsertOrder[]> 
             const minutes = totalMinutes % 60;
             value = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
           } else if (typeof value === 'string') {
-            // 已经是时间格式
-            value = value.trim();
+            // 已经是时间格式，移除可能的时区后缀如 +08
+            value = value.trim().replace(/\s*\+[\d:]+$/, '');
           }
         }
 
@@ -238,7 +310,7 @@ export async function parseExcelToOrder(buffer: Buffer): Promise<InsertOrder[]> 
       }
     }
 
-    return order;
+    return processOrderTimeRemark(order);
   }).filter((order: any) => {
     // 过滤掉空行
     return order.order_date || order.group_no || order.guest_name;

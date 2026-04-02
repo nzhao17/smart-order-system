@@ -95,6 +95,8 @@ export default function OrderDetailScreen() {
       if (result.success) {
         const data = result.data;
         setOrder(data);
+        // 处理时间字段，移除可能的时区后缀
+        const cleanTimeStr = (timeStr: string) => timeStr ? timeStr.replace(/\s*\+[\d:]+$/, '') : '';
         setFormData({
           order_date: data.order_date || '',
           group_no: data.group_no || '',
@@ -103,8 +105,8 @@ export default function OrderDetailScreen() {
           dispatcher: data.dispatcher || '',
           driver: data.driver || '',
           train_no: data.train_no || '',
-          train_time: data.train_time || '',
-          time_remark: data.time_remark || '',
+          train_time: cleanTimeStr(data.train_time),
+          time_remark: cleanTimeStr(data.time_remark),
           guest_name: data.guest_name || '',
           phone: data.phone || '',
           people_count: data.people_count?.toString() || '',
@@ -380,7 +382,7 @@ export default function OrderDetailScreen() {
                 onChange={(v) => updateField('train_no', v)} />
               <FormTimeInput label="班次时间" value={formData.train_time}
                 onChange={(v) => updateField('train_time', v)} />
-              <FormInput label="时间备注" value={formData.time_remark} placeholder="送站时自动计算"
+              <FormTimeInput label="时间备注" value={formData.time_remark}
                 onChange={(v) => updateField('time_remark', v)} />
             </View>
 
@@ -470,17 +472,27 @@ function FormDateInput({ label, value, onChange }: {
   const [show, setShow] = useState(false);
   
   const handleChange = (event: any, selectedDate?: Date) => {
-    setShow(Platform.OS === 'ios');
+    if (Platform.OS !== 'ios') {
+      setShow(false);
+    }
     if (selectedDate) {
       const formatted = selectedDate.toISOString().split('T')[0];
       onChange(formatted);
     }
   };
 
+  const openPicker = () => {
+    setShow(true);
+  };
+
   return (
     <View style={styles.formField}>
       <Text style={styles.formLabel}>{label}</Text>
-      <TouchableOpacity style={styles.pickerInput} onPress={() => setShow(true)}>
+      <TouchableOpacity 
+        style={styles.pickerInput} 
+        onPress={openPicker}
+        activeOpacity={0.7}
+      >
         <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>
           {value || '请选择日期'}
         </Text>
@@ -507,7 +519,9 @@ function FormTimeInput({ label, value, onChange }: {
   const [show, setShow] = useState(false);
   
   const handleChange = (event: any, selectedDate?: Date) => {
-    setShow(Platform.OS === 'ios');
+    if (Platform.OS !== 'ios') {
+      setShow(false);
+    }
     if (selectedDate) {
       const hours = selectedDate.getHours().toString().padStart(2, '0');
       const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
@@ -526,10 +540,18 @@ function FormTimeInput({ label, value, onChange }: {
     return date;
   };
 
+  const openPicker = () => {
+    setShow(true);
+  };
+
   return (
     <View style={styles.formField}>
       <Text style={styles.formLabel}>{label}</Text>
-      <TouchableOpacity style={styles.pickerInput} onPress={() => setShow(true)}>
+      <TouchableOpacity 
+        style={styles.pickerInput} 
+        onPress={openPicker}
+        activeOpacity={0.7}
+      >
         <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>
           {value || '请选择时间'}
         </Text>

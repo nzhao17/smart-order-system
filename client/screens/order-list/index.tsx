@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Screen } from '@/components/Screen';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 
@@ -84,6 +85,7 @@ export default function OrderListScreen() {
   const [todayStats, setTodayStats] = useState({ date: '', totalOrders: 0 });
   const [filterVisible, setFilterVisible] = useState(false);
   const [isFilteredToday, setIsFilteredToday] = useState(false);
+  const [isFiltered, setIsFiltered] = useState(false); // 是否通过筛选按钮筛选
   const [filters, setFilters] = useState<Filters>({
     date_from: '',
     date_to: '',
@@ -116,11 +118,12 @@ export default function OrderListScreen() {
   }, []);
 
   // 获取订单列表
-  const fetchOrders = useCallback(async (customFilters?: Filters) => {
+  const fetchOrders = useCallback(async (customFilters?: Filters, filtered?: boolean) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       const activeFilters = customFilters || filters;
+      const isCurrentlyFiltered = filtered !== undefined ? filtered : isFiltered;
       
       if (activeFilters.date_from) params.append('date_from', activeFilters.date_from);
       if (activeFilters.date_to) params.append('date_to', activeFilters.date_to);
@@ -136,8 +139,8 @@ export default function OrderListScreen() {
       if (activeFilters.people_count) params.append('people_count', activeFilters.people_count);
       if (activeFilters.hotel) params.append('hotel', activeFilters.hotel);
       
-      // 按时间升序排列
-      params.append('sortOrder', 'asc');
+      // 排序逻辑：筛选后升序，非筛选降序
+      params.append('sortOrder', isCurrentlyFiltered ? 'asc' : 'desc');
 
       const response = await fetch(
         `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/orders?${params.toString()}&pageSize=100`
@@ -151,7 +154,7 @@ export default function OrderListScreen() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, isFiltered]);
 
   // 页面聚焦时刷新数据
   useFocusEffect(
@@ -213,6 +216,7 @@ export default function OrderListScreen() {
     if (isFilteredToday) {
       // 已筛选今日，取消筛选显示全部
       setIsFilteredToday(false);
+      setIsFiltered(false);
       const emptyFilters: Filters = {
         date_from: '',
         date_to: '',
@@ -235,6 +239,7 @@ export default function OrderListScreen() {
       const todayFilters: Filters = { ...filters, date_from: today, date_to: today };
       setFilters(todayFilters);
       setIsFilteredToday(true);
+      setIsFiltered(true);
     }
   };
 
@@ -258,11 +263,15 @@ export default function OrderListScreen() {
     setTempFilters(emptyFilters);
     setFilters(emptyFilters);
     setIsFilteredToday(false);
+    setIsFiltered(false);
   };
 
   // 应用筛选
   const applyFilters = () => {
     setFilters(tempFilters);
+    // 检查是否有有效的筛选条件
+    const hasFilter = Object.values(tempFilters).some(v => v !== '');
+    setIsFiltered(hasFilter);
     setIsFilteredToday(false);
     setFilterVisible(false);
   };
@@ -275,6 +284,13 @@ export default function OrderListScreen() {
       return `${parts[1]}月${parts[2]}日`;
     }
     return dateStr;
+  };
+
+  // 格式化时间显示（移除时区后缀如 +08）
+  const formatTime = (timeStr: string) => {
+    if (!timeStr) return '';
+    // 移除时区后缀，如 "15:30+08:00" -> "15:30"
+    return timeStr.replace(/\s*\+[\d:]+$/, '');
   };
 
   // 检查是否有激活的筛选条件
@@ -304,8 +320,8 @@ export default function OrderListScreen() {
         `调度: ${order.dispatcher || '-'}`,
         `司机: ${order.driver || '-'}`,
         `班次: ${order.train_no || '-'}`,
-        `班次时间: ${order.train_time || '-'}`,
-        `时间备注: ${order.time_remark || '-'}`,
+        `班次时间: ${formatTime(order.train_time) || '-'}`,
+        `时间备注: ${formatTime(order.time_remark) || '-'}`,
         `客人姓名: ${order.guest_name || '-'}`,
         `手机号: ${order.phone || '-'}`,
         `人数: ${order.people_count || '-'}`,
@@ -423,7 +439,7 @@ export default function OrderListScreen() {
                     <Ionicons name="location-outline" size={12} color={COLORS.textSecondary} />
                     <Text style={styles.detailText}>{order.station}</Text>
                     <Ionicons name="train-outline" size={12} color={COLORS.textSecondary} style={{ marginLeft: 12 }} />
-                    <Text style={styles.detailText}>{order.train_no} {order.train_time}</Text>
+                    <Text style={styles.detailText}>{order.train_no} {formatTime(order.train_time)}</Text>
                   </View>
                   <View style={styles.detailRow}>
                     <Ionicons name="person-outline" size={12} color={COLORS.textSecondary} />
@@ -483,23 +499,17 @@ export default function OrderListScreen() {
                   <View style={styles.dateRangeRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.filterLabel}>开始日期</Text>
-                      <TextInput
-                        style={[styles.filterInput, { paddingVertical: 8 }]}
-                        placeholder="YYYY-MM-DD"
-                        placeholderTextColor={COLORS.placeholder}
+                      <FilterDateInput
                         value={tempFilters.date_from}
-                        onChangeText={(v) => setTempFilters({ ...tempFilters, date_from: v })}
+                        onChange={(v) => setTempFilters({ ...tempFilters, date_from: v })}
                       />
                     </View>
                     <View style={{ width: 8 }} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.filterLabel}>结束日期</Text>
-                      <TextInput
-                        style={[styles.filterInput, { paddingVertical: 8 }]}
-                        placeholder="YYYY-MM-DD"
-                        placeholderTextColor={COLORS.placeholder}
+                      <FilterDateInput
                         value={tempFilters.date_to}
-                        onChangeText={(v) => setTempFilters({ ...tempFilters, date_to: v })}
+                        onChange={(v) => setTempFilters({ ...tempFilters, date_to: v })}
                       />
                     </View>
                   </View>
@@ -713,6 +723,44 @@ function FilterSelect({ label, value, options, onChange }: {
           </TouchableOpacity>
         ))}
       </View>
+    </View>
+  );
+}
+
+// 筛选日期选择器
+function FilterDateInput({ value, onChange }: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [show, setShow] = useState(false);
+  
+  const handleChange = (event: any, selectedDate?: Date) => {
+    setShow(Platform.OS === 'ios');
+    if (selectedDate) {
+      const formatted = selectedDate.toISOString().split('T')[0];
+      onChange(formatted);
+    }
+  };
+
+  return (
+    <View style={{ marginBottom: 0 }}>
+      <TouchableOpacity 
+        style={[styles.filterInput, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }]} 
+        onPress={() => setShow(true)}
+      >
+        <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>
+          {value || '选择日期'}
+        </Text>
+        <Ionicons name="calendar-outline" size={18} color={COLORS.textSecondary} />
+      </TouchableOpacity>
+      {show && (
+        <DateTimePicker
+          value={value ? new Date(value) : new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleChange}
+        />
+      )}
     </View>
   );
 }
@@ -1034,5 +1082,13 @@ const styles = {
     fontWeight: '600' as const,
     fontSize: 15,
     letterSpacing: 1,
+  },
+  pickerText: {
+    fontSize: 14,
+    color: COLORS.textPrimary,
+  },
+  pickerPlaceholder: {
+    fontSize: 14,
+    color: COLORS.placeholder,
   },
 };

@@ -283,21 +283,19 @@ export default function OrderEntryScreen() {
     setEditingOrder({});
   };
 
-  // 删除识别结果
+  // 删除识别结果（直接移除，无需弹窗确认）
   const deleteParsedOrder = (index: number) => {
-    Alert.alert('确认删除', '确定要删除这条识别结果吗？', [
-      { text: '取消', style: 'cancel' },
-      { 
-        text: '删除', 
-        style: 'destructive',
-        onPress: () => {
-          const newOrders = parsedOrders.filter((_, i) => i !== index);
-          setParsedOrders(newOrders);
-        }
-      },
-    ]);
+    const newOrders = parsedOrders.filter((_, i) => i !== index);
+    setParsedOrders(newOrders);
   };
 
+  // 格式化时间显示（移除时区后缀如 +08）
+  const formatTime = (timeStr: string) => {
+    if (!timeStr) return '';
+    return timeStr.replace(/\s*\+[\d:]+$/, '');
+  };
+
+  // 重置表单
   const resetForm = () => {
     setTextInput('');
     setSelectedImage(null);
@@ -427,7 +425,7 @@ export default function OrderEntryScreen() {
                     {order.guest_name || '未命名'} - {order.group_no || '无团号'}
                   </Text>
                   <Text style={styles.orderItemSub}>
-                    {[order.order_date, order.station, order.pickup_type, order.train_no, order.train_time]
+                    {[order.order_date, order.station, order.pickup_type, order.train_no, formatTime(order.train_time || '')]
                       .filter(Boolean).join(' | ')}
                   </Text>
                 </View>
@@ -499,8 +497,8 @@ export default function OrderEntryScreen() {
                   onChange={(v) => updateEditingField('train_no', v)} />
                 <EditTimeField label="班次时间" value={editingOrder.train_time || ''} 
                   onChange={(v) => updateEditingField('train_time', v)} />
-                <EditField label="时间备注" value={editingOrder.time_remark || ''} 
-                  onChange={(v) => updateEditingField('time_remark', v)} placeholder="送站时自动计算" />
+                <EditTimeField label="时间备注" value={editingOrder.time_remark || ''} 
+                  onChange={(v) => updateEditingField('time_remark', v)} />
                 <EditField label="客人" value={editingOrder.guest_name || ''} 
                   onChange={(v) => updateEditingField('guest_name', v)} />
                 <EditField label="手机号" value={editingOrder.phone || ''} 
@@ -577,11 +575,17 @@ function EditDateField({ label, value, onChange }: {
   const [show, setShow] = useState(false);
   
   const handleChange = (event: any, selectedDate?: Date) => {
-    setShow(Platform.OS === 'ios');
+    if (Platform.OS !== 'ios') {
+      setShow(false);
+    }
     if (selectedDate) {
       const formatted = selectedDate.toISOString().split('T')[0];
       onChange(formatted);
     }
+  };
+
+  const openPicker = () => {
+    setShow(true);
   };
 
   return (
@@ -589,7 +593,8 @@ function EditDateField({ label, value, onChange }: {
       <Text style={styles.editLabel}>{label}</Text>
       <TouchableOpacity 
         style={styles.pickerInput} 
-        onPress={() => setShow(true)}
+        onPress={openPicker}
+        activeOpacity={0.7}
       >
         <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>
           {value || '请选择日期'}
@@ -617,7 +622,9 @@ function EditTimeField({ label, value, onChange }: {
   const [show, setShow] = useState(false);
   
   const handleChange = (event: any, selectedDate?: Date) => {
-    setShow(Platform.OS === 'ios');
+    if (Platform.OS !== 'ios') {
+      setShow(false);
+    }
     if (selectedDate) {
       const hours = selectedDate.getHours().toString().padStart(2, '0');
       const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
@@ -637,12 +644,17 @@ function EditTimeField({ label, value, onChange }: {
     return date;
   };
 
+  const openPicker = () => {
+    setShow(true);
+  };
+
   return (
     <View style={styles.editField}>
       <Text style={styles.editLabel}>{label}</Text>
       <TouchableOpacity 
         style={styles.pickerInput} 
-        onPress={() => setShow(true)}
+        onPress={openPicker}
+        activeOpacity={0.7}
       >
         <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>
           {value || '请选择时间'}
