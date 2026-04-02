@@ -56,7 +56,7 @@ export default function HomeScreen() {
               <Ionicons name="stats-chart-outline" size={32} color={COLORS.primary} />
             </View>
             <Text style={styles.secondaryButtonText}>订单统计</Text>
-            <Text style={styles.secondarySubtext}>列表 · 筛选 · 详情</Text>
+            <Text style={styles.secondarySubtext}>筛选 · 详情 · 导出</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -64,7 +64,7 @@ export default function HomeScreen() {
       {/* 底部装饰 */}
       <View style={styles.footer}>
         <View style={styles.footerLine} />
-        <Text style={styles.footerText}>旅行社订单管理系统</Text>
+        <Text style={styles.footerText}>北京心鑫相连科技有限公司 2026</Text>
         <View style={styles.footerLine} />
       </View>
     </Screen>
