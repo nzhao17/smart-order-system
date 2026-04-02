@@ -1,18 +1,24 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+package-lock.json
+pnpm-lock.yaml
 
-# Build outputs
+# Build outputs (由构建脚本生成，不提交)
 dist/
 build/
 .expo/
 .expo-shared/
 web-build/
+client/dist/
+server/dist/
 
 # Environment files (重要！不要上传环境变量)
 .env
 .env.local
 .env.*.local
+server/.env
+client/.env
 
 # IDE
 .idea/
@@ -39,3 +45,6 @@ expo-env.d.ts
 .eslintcache
 *.tsbuildinfo
 node-compile-cache/
+
+# Test coverage
+coverage/
