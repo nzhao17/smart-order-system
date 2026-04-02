@@ -1,3 +1,4 @@
+import 'dotenv/config';  // 必须在最前面加载环境变量
 import express from "express";
 import cors from "cors";
 import path from "path";
