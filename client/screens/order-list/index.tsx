@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Screen } from '@/components/Screen';
@@ -63,7 +64,6 @@ interface Filters {
   date_to: string;
   group_no: string;
   station: string;
-  pickup_type: string;
   dispatcher: string;
   driver: string;
   train_no: string;
@@ -89,7 +89,6 @@ export default function OrderListScreen() {
     date_to: '',
     group_no: '',
     station: '',
-    pickup_type: '',
     dispatcher: '',
     driver: '',
     train_no: '',
@@ -127,7 +126,6 @@ export default function OrderListScreen() {
       if (activeFilters.date_to) params.append('date_to', activeFilters.date_to);
       if (activeFilters.group_no) params.append('group_no', activeFilters.group_no);
       if (activeFilters.station) params.append('station', activeFilters.station);
-      if (activeFilters.pickup_type) params.append('pickup_type', activeFilters.pickup_type);
       if (activeFilters.dispatcher) params.append('dispatcher', activeFilters.dispatcher);
       if (activeFilters.driver) params.append('driver', activeFilters.driver);
       if (activeFilters.train_no) params.append('train_no', activeFilters.train_no);
@@ -137,6 +135,9 @@ export default function OrderListScreen() {
       if (activeFilters.phone) params.append('phone', activeFilters.phone);
       if (activeFilters.people_count) params.append('people_count', activeFilters.people_count);
       if (activeFilters.hotel) params.append('hotel', activeFilters.hotel);
+      
+      // 按时间升序排列
+      params.append('sortOrder', 'asc');
 
       const response = await fetch(
         `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/orders?${params.toString()}&pageSize=100`
@@ -217,7 +218,6 @@ export default function OrderListScreen() {
         date_to: '',
         group_no: '',
         station: '',
-        pickup_type: '',
         dispatcher: '',
         driver: '',
         train_no: '',
@@ -245,7 +245,6 @@ export default function OrderListScreen() {
       date_to: '',
       group_no: '',
       station: '',
-      pickup_type: '',
       dispatcher: '',
       driver: '',
       train_no: '',
@@ -283,6 +282,50 @@ export default function OrderListScreen() {
     return Object.values(filters).some(v => v !== '');
   };
 
+  // 一键复制筛选结果
+  const copyOrdersToClipboard = async () => {
+    if (orders.length === 0) {
+      if (Platform.OS === 'web') {
+        window.alert('没有可复制的订单');
+      } else {
+        Alert.alert('提示', '没有可复制的订单');
+      }
+      return;
+    }
+
+    // 格式化订单数据（不包含金额相关字段）
+    const formatOrder = (order: Order, index: number): string => {
+      const lines = [
+        `【订单${index + 1}】`,
+        `时间: ${order.order_date || '-'}`,
+        `团号: ${order.group_no || '-'}`,
+        `场站: ${order.station || '-'}`,
+        `接送站: ${order.pickup_type || '-'}`,
+        `调度: ${order.dispatcher || '-'}`,
+        `司机: ${order.driver || '-'}`,
+        `班次: ${order.train_no || '-'}`,
+        `班次时间: ${order.train_time || '-'}`,
+        `时间备注: ${order.time_remark || '-'}`,
+        `客人姓名: ${order.guest_name || '-'}`,
+        `手机号: ${order.phone || '-'}`,
+        `人数: ${order.people_count || '-'}`,
+        `宾馆: ${order.hotel || '-'}`,
+        `备注: ${order.remark || '-'}`,
+      ];
+      return lines.join('\n');
+    };
+
+    const content = orders.map((order, index) => formatOrder(order, index)).join('\n\n');
+    
+    await Clipboard.setStringAsync(content);
+    
+    if (Platform.OS === 'web') {
+      window.alert(`已复制 ${orders.length} 条订单到剪贴板`);
+    } else {
+      Alert.alert('成功', `已复制 ${orders.length} 条订单到剪贴板`);
+    }
+  };
+
   return (
     <Screen style={{ backgroundColor: COLORS.background }}>
       {/* 顶部导航栏 */}
@@ -315,12 +358,18 @@ export default function OrderListScreen() {
 
         {/* 筛选按钮 */}
         <View style={styles.listHeader}>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
-              <Ionicons name="refresh-outline" size={16} color={COLORS.textSecondary} />
-              <Text style={styles.resetButtonText}>重置</Text>
+          {/* 一键复制按钮 - 仅在筛选后显示 */}
+          {hasActiveFilters() && orders.length > 0 && (
+            <TouchableOpacity style={styles.copyButton} onPress={copyOrdersToClipboard}>
+              <Ionicons name="copy-outline" size={16} color={COLORS.success} />
+              <Text style={styles.copyButtonText}>一键复制</Text>
             </TouchableOpacity>
-          </View>
+          )}
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
+            <Ionicons name="refresh-outline" size={16} color={COLORS.textSecondary} />
+            <Text style={styles.resetButtonText}>重置</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.filterButton, hasActiveFilters() && { backgroundColor: COLORS.primary }]}
             onPress={() => { setTempFilters(filters); setFilterVisible(true); }}
@@ -435,18 +484,18 @@ export default function OrderListScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.filterLabel}>开始日期</Text>
                       <TextInput
-                        style={styles.filterInput}
+                        style={[styles.filterInput, { paddingVertical: 8 }]}
                         placeholder="YYYY-MM-DD"
                         placeholderTextColor={COLORS.placeholder}
                         value={tempFilters.date_from}
                         onChangeText={(v) => setTempFilters({ ...tempFilters, date_from: v })}
                       />
                     </View>
-                    <View style={{ width: 12 }} />
+                    <View style={{ width: 8 }} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.filterLabel}>结束日期</Text>
                       <TextInput
-                        style={styles.filterInput}
+                        style={[styles.filterInput, { paddingVertical: 8 }]}
                         placeholder="YYYY-MM-DD"
                         placeholderTextColor={COLORS.placeholder}
                         value={tempFilters.date_to}
@@ -458,43 +507,146 @@ export default function OrderListScreen() {
 
                 <View style={styles.filterSection}>
                   <Text style={styles.filterSectionTitle}>基本信息</Text>
-                  <FilterInput label="团号" value={tempFilters.group_no} placeholder="请输入团号"
-                    onChange={(v) => setTempFilters({ ...tempFilters, group_no: v })} />
-                  <FilterInput label="场站" value={tempFilters.station} placeholder="如：大兴机场"
-                    onChange={(v) => setTempFilters({ ...tempFilters, station: v })} />
-                  <FilterSelect label="接送站" value={tempFilters.pickup_type} options={['接站', '送站']}
-                    onChange={(v) => setTempFilters({ ...tempFilters, pickup_type: v })} />
+                  <View style={styles.filterRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.filterLabel}>团号</Text>
+                      <TextInput
+                        style={[styles.filterInput, { paddingVertical: 8 }]}
+                        placeholder="请输入团号"
+                        placeholderTextColor={COLORS.placeholder}
+                        value={tempFilters.group_no}
+                        onChangeText={(v) => setTempFilters({ ...tempFilters, group_no: v })}
+                      />
+                    </View>
+                    <View style={{ width: 8 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.filterLabel}>场站</Text>
+                      <TextInput
+                        style={[styles.filterInput, { paddingVertical: 8 }]}
+                        placeholder="如：大兴机场"
+                        placeholderTextColor={COLORS.placeholder}
+                        value={tempFilters.station}
+                        onChangeText={(v) => setTempFilters({ ...tempFilters, station: v })}
+                      />
+                    </View>
+                  </View>
                 </View>
 
                 <View style={styles.filterSection}>
                   <Text style={styles.filterSectionTitle}>人员信息</Text>
-                  <FilterInput label="调度" value={tempFilters.dispatcher} placeholder="请输入调度姓名"
-                    onChange={(v) => setTempFilters({ ...tempFilters, dispatcher: v })} />
-                  <FilterInput label="司机" value={tempFilters.driver} placeholder="请输入司机姓名"
-                    onChange={(v) => setTempFilters({ ...tempFilters, driver: v })} />
-                  <FilterInput label="客人" value={tempFilters.guest_name} placeholder="请输入客人姓名"
-                    onChange={(v) => setTempFilters({ ...tempFilters, guest_name: v })} />
-                  <FilterInput label="手机号" value={tempFilters.phone} placeholder="请输入手机号"
-                    onChange={(v) => setTempFilters({ ...tempFilters, phone: v })} />
+                  <View style={styles.filterRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.filterLabel}>调度</Text>
+                      <TextInput
+                        style={[styles.filterInput, { paddingVertical: 8 }]}
+                        placeholder="调度姓名"
+                        placeholderTextColor={COLORS.placeholder}
+                        value={tempFilters.dispatcher}
+                        onChangeText={(v) => setTempFilters({ ...tempFilters, dispatcher: v })}
+                      />
+                    </View>
+                    <View style={{ width: 8 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.filterLabel}>司机</Text>
+                      <TextInput
+                        style={[styles.filterInput, { paddingVertical: 8 }]}
+                        placeholder="司机姓名"
+                        placeholderTextColor={COLORS.placeholder}
+                        value={tempFilters.driver}
+                        onChangeText={(v) => setTempFilters({ ...tempFilters, driver: v })}
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.filterRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.filterLabel}>客人</Text>
+                      <TextInput
+                        style={[styles.filterInput, { paddingVertical: 8 }]}
+                        placeholder="客人姓名"
+                        placeholderTextColor={COLORS.placeholder}
+                        value={tempFilters.guest_name}
+                        onChangeText={(v) => setTempFilters({ ...tempFilters, guest_name: v })}
+                      />
+                    </View>
+                    <View style={{ width: 8 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.filterLabel}>手机号</Text>
+                      <TextInput
+                        style={[styles.filterInput, { paddingVertical: 8 }]}
+                        placeholder="手机号"
+                        placeholderTextColor={COLORS.placeholder}
+                        value={tempFilters.phone}
+                        onChangeText={(v) => setTempFilters({ ...tempFilters, phone: v })}
+                      />
+                    </View>
+                  </View>
                 </View>
 
                 <View style={styles.filterSection}>
                   <Text style={styles.filterSectionTitle}>行程信息</Text>
-                  <FilterInput label="班次" value={tempFilters.train_no} placeholder="如：CZ8929"
-                    onChange={(v) => setTempFilters({ ...tempFilters, train_no: v })} />
-                  <FilterInput label="班次时间" value={tempFilters.train_time} placeholder="如：15:30"
-                    onChange={(v) => setTempFilters({ ...tempFilters, train_time: v })} />
-                  <FilterInput label="时间备注" value={tempFilters.time_remark} placeholder="请输入时间备注"
-                    onChange={(v) => setTempFilters({ ...tempFilters, time_remark: v })} />
+                  <View style={styles.filterRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.filterLabel}>班次</Text>
+                      <TextInput
+                        style={[styles.filterInput, { paddingVertical: 8 }]}
+                        placeholder="如：CZ8929"
+                        placeholderTextColor={COLORS.placeholder}
+                        value={tempFilters.train_no}
+                        onChangeText={(v) => setTempFilters({ ...tempFilters, train_no: v })}
+                      />
+                    </View>
+                    <View style={{ width: 8 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.filterLabel}>班次时间</Text>
+                      <TextInput
+                        style={[styles.filterInput, { paddingVertical: 8 }]}
+                        placeholder="如：15:30"
+                        placeholderTextColor={COLORS.placeholder}
+                        value={tempFilters.train_time}
+                        onChangeText={(v) => setTempFilters({ ...tempFilters, train_time: v })}
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.filterRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.filterLabel}>时间备注</Text>
+                      <TextInput
+                        style={[styles.filterInput, { paddingVertical: 8 }]}
+                        placeholder="时间备注"
+                        placeholderTextColor={COLORS.placeholder}
+                        value={tempFilters.time_remark}
+                        onChangeText={(v) => setTempFilters({ ...tempFilters, time_remark: v })}
+                      />
+                    </View>
+                  </View>
                 </View>
 
                 <View style={styles.filterSection}>
                   <Text style={styles.filterSectionTitle}>其他信息</Text>
-                  <FilterInput label="人数" value={tempFilters.people_count} placeholder="请输入人数"
-                    keyboardType="numeric"
-                    onChange={(v) => setTempFilters({ ...tempFilters, people_count: v })} />
-                  <FilterInput label="宾馆" value={tempFilters.hotel} placeholder="请输入宾馆名称"
-                    onChange={(v) => setTempFilters({ ...tempFilters, hotel: v })} />
+                  <View style={styles.filterRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.filterLabel}>人数</Text>
+                      <TextInput
+                        style={[styles.filterInput, { paddingVertical: 8 }]}
+                        placeholder="人数"
+                        placeholderTextColor={COLORS.placeholder}
+                        value={tempFilters.people_count}
+                        keyboardType="numeric"
+                        onChangeText={(v) => setTempFilters({ ...tempFilters, people_count: v })}
+                      />
+                    </View>
+                    <View style={{ width: 8 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.filterLabel}>宾馆</Text>
+                      <TextInput
+                        style={[styles.filterInput, { paddingVertical: 8 }]}
+                        placeholder="宾馆名称"
+                        placeholderTextColor={COLORS.placeholder}
+                        value={tempFilters.hotel}
+                        onChangeText={(v) => setTempFilters({ ...tempFilters, hotel: v })}
+                      />
+                    </View>
+                  </View>
                 </View>
               </ScrollView>
 
@@ -628,9 +780,26 @@ const styles = {
   },
   listHeader: {
     flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
+    justifyContent: 'flex-end' as const,
     alignItems: 'center' as const,
     marginBottom: 16,
+    gap: 10,
+  },
+  copyButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    backgroundColor: 'rgba(5,150,105,0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: COLORS.success,
+  },
+  copyButtonText: {
+    color: COLORS.success,
+    fontWeight: '500' as const,
+    fontSize: 14,
   },
   resetButton: {
     flexDirection: 'row' as const,
@@ -775,35 +944,39 @@ const styles = {
     letterSpacing: 2,
   },
   modalBody: {
-    padding: 20,
+    padding: 16,
     maxHeight: 450,
   },
   filterSection: {
-    marginBottom: 20,
+    marginBottom: 14,
   },
   filterSectionTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600' as const,
     color: COLORS.primary,
-    marginBottom: 12,
+    marginBottom: 8,
     letterSpacing: 1,
   },
   filterLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textSecondary,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   filterInput: {
     backgroundColor: COLORS.surface,
     borderRadius: 4,
-    padding: 12,
-    fontSize: 15,
+    padding: 10,
+    fontSize: 14,
     color: COLORS.textPrimary,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   dateRangeRow: {
     flexDirection: 'row' as const,
+  },
+  filterRow: {
+    flexDirection: 'row' as const,
+    marginBottom: 8,
   },
   selectRow: {
     flexDirection: 'row' as const,

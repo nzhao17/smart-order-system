@@ -25,6 +25,7 @@ const router = express.Router();
  * - hotel: 宾馆筛选
  * - page: 页码（默认1）
  * - pageSize: 每页数量（默认20）
+ * - sortOrder: 排序方向，asc=升序，desc=降序（默认desc）
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -32,19 +33,20 @@ router.get('/', async (req: Request, res: Response) => {
     const {
       date_from, date_to, group_no, station, pickup_type, dispatcher, driver,
       train_no, train_time, time_remark, guest_name, phone, people_count, hotel,
-      page = '1', pageSize = '20'
+      page = '1', pageSize = '20', sortOrder = 'desc'
     } = req.query;
 
     const pageNum = parseInt(page as string) || 1;
     const pageSizeNum = parseInt(pageSize as string) || 20;
     const offset = (pageNum - 1) * pageSizeNum;
+    const isAscending = sortOrder === 'asc';
 
-    // 按时间倒序排列（最新的在前面）
+    // 按时间排序
     let query = client
       .from('orders')
       .select('*', { count: 'exact' })
-      .order('order_date', { ascending: false })
-      .order('created_at', { ascending: false })
+      .order('order_date', { ascending: isAscending })
+      .order('created_at', { ascending: isAscending })
       .range(offset, offset + pageSizeNum - 1);
 
     // 筛选条件

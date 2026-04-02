@@ -10,12 +10,12 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Screen } from '@/components/Screen';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createFormDataFile } from '@/utils';
@@ -48,6 +48,7 @@ interface OrderData {
   driver?: string;
   train_no?: string;
   train_time?: string;
+  time_remark?: string;
   guest_name?: string;
   phone?: string;
   people_count?: number;
@@ -210,6 +211,57 @@ export default function OrderEntryScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 计算送站时间备注
+  const calculateTimeRemark = (pickupType: string, station: string, trainTime: string): string => {
+    if (pickupType !== '送站' || !trainTime) return '';
+    
+    const [hours, minutes] = trainTime.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return '';
+    
+    const trainDate = new Date();
+    trainDate.setHours(hours, minutes, 0, 0);
+    
+    // 判断场站类型：机场还是火车站
+    const isAirport = station.includes('机场');
+    const isStation = station.includes('站');
+    
+    let pickupDate = new Date(trainDate);
+    if (isAirport) {
+      // 机场提前3小时
+      pickupDate.setHours(pickupDate.getHours() - 3);
+    } else if (isStation) {
+      // 火车站提前2小时
+      pickupDate.setHours(pickupDate.getHours() - 2);
+    } else {
+      // 默认提前2小时
+      pickupDate.setHours(pickupDate.getHours() - 2);
+    }
+    
+    const pickupHours = pickupDate.getHours().toString().padStart(2, '0');
+    const pickupMinutes = pickupDate.getMinutes().toString().padStart(2, '0');
+    return pickupHours + ':' + pickupMinutes;
+  };
+
+  // 更新编辑中的订单字段
+  const updateEditingField = (field: string, value: string | number | undefined) => {
+    setEditingOrder(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      // 当接送站、场站或班次时间变化时，自动计算时间备注
+      if (field === 'pickup_type' || field === 'station' || field === 'train_time') {
+        const pickupType = field === 'pickup_type' ? String(value) : prev.pickup_type;
+        const station = field === 'station' ? String(value) : prev.station;
+        const trainTime = field === 'train_time' ? String(value) : prev.train_time;
+        
+        if (pickupType === '送站' && station && trainTime) {
+          newData.time_remark = calculateTimeRemark(pickupType, station, trainTime);
+        }
+      }
+      
+      return newData;
+    });
   };
 
   // 打开编辑弹窗
@@ -417,62 +469,62 @@ export default function OrderEntryScreen() {
 
       {/* 编辑弹窗 */}
       <Modal visible={editModalVisible} transparent animationType="slide">
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>编辑订单信息</Text>
-                  <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-                    <Ionicons name="close" size={24} color={COLORS.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>编辑订单信息</Text>
+                <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                  <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+              </View>
 
-                <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
-                  <EditField label="时间" value={editingOrder.order_date || ''} 
-                    onChange={(v) => setEditingOrder({ ...editingOrder, order_date: v })} />
-                  <EditField label="团号" value={editingOrder.group_no || ''} 
-                    onChange={(v) => setEditingOrder({ ...editingOrder, group_no: v })} />
-                  <EditField label="场站" value={editingOrder.station || ''} 
-                    onChange={(v) => setEditingOrder({ ...editingOrder, station: v })} />
-                  <EditField label="接送站" value={editingOrder.pickup_type || ''} 
-                    onChange={(v) => setEditingOrder({ ...editingOrder, pickup_type: v })} />
-                  <EditField label="调度" value={editingOrder.dispatcher || ''} 
-                    onChange={(v) => setEditingOrder({ ...editingOrder, dispatcher: v })} />
-                  <EditField label="司机" value={editingOrder.driver || ''} 
-                    onChange={(v) => setEditingOrder({ ...editingOrder, driver: v })} />
-                  <EditField label="班次" value={editingOrder.train_no || ''} 
-                    onChange={(v) => setEditingOrder({ ...editingOrder, train_no: v })} />
-                  <EditField label="班次时间" value={editingOrder.train_time || ''} 
-                    onChange={(v) => setEditingOrder({ ...editingOrder, train_time: v })} />
-                  <EditField label="客人" value={editingOrder.guest_name || ''} 
-                    onChange={(v) => setEditingOrder({ ...editingOrder, guest_name: v })} />
-                  <EditField label="手机号" value={editingOrder.phone || ''} 
-                    onChange={(v) => setEditingOrder({ ...editingOrder, phone: v })} />
-                  <EditField label="人数" value={editingOrder.people_count?.toString() || ''} 
-                    onChange={(v) => setEditingOrder({ ...editingOrder, people_count: v ? parseInt(v) : undefined })} 
-                    keyboardType="numeric" />
-                  <EditField label="宾馆" value={editingOrder.hotel || ''} 
-                    onChange={(v) => setEditingOrder({ ...editingOrder, hotel: v })} />
-                  <EditField label="备注" value={editingOrder.remark || ''} 
-                    onChange={(v) => setEditingOrder({ ...editingOrder, remark: v })} multiline />
-                </ScrollView>
+              <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+                <EditDateField label="时间" value={editingOrder.order_date || ''} 
+                  onChange={(v) => updateEditingField('order_date', v)} />
+                <EditField label="团号" value={editingOrder.group_no || ''} 
+                  onChange={(v) => updateEditingField('group_no', v)} />
+                <EditField label="场站" value={editingOrder.station || ''} 
+                  onChange={(v) => updateEditingField('station', v)} />
+                <EditSelectField label="接送站" value={editingOrder.pickup_type || ''} options={['接站', '送站']}
+                  onChange={(v) => updateEditingField('pickup_type', v)} />
+                <EditField label="调度" value={editingOrder.dispatcher || ''} 
+                  onChange={(v) => updateEditingField('dispatcher', v)} />
+                <EditField label="司机" value={editingOrder.driver || ''} 
+                  onChange={(v) => updateEditingField('driver', v)} />
+                <EditField label="班次" value={editingOrder.train_no || ''} 
+                  onChange={(v) => updateEditingField('train_no', v)} />
+                <EditTimeField label="班次时间" value={editingOrder.train_time || ''} 
+                  onChange={(v) => updateEditingField('train_time', v)} />
+                <EditField label="时间备注" value={editingOrder.time_remark || ''} 
+                  onChange={(v) => updateEditingField('time_remark', v)} placeholder="送站时自动计算" />
+                <EditField label="客人" value={editingOrder.guest_name || ''} 
+                  onChange={(v) => updateEditingField('guest_name', v)} />
+                <EditField label="手机号" value={editingOrder.phone || ''} 
+                  onChange={(v) => updateEditingField('phone', v)} />
+                <EditField label="人数" value={editingOrder.people_count?.toString() || ''} 
+                  onChange={(v) => updateEditingField('people_count', v ? parseInt(v) : undefined)} 
+                  keyboardType="numeric" />
+                <EditField label="宾馆" value={editingOrder.hotel || ''} 
+                  onChange={(v) => updateEditingField('hotel', v)} />
+                <EditField label="备注" value={editingOrder.remark || ''} 
+                  onChange={(v) => updateEditingField('remark', v)} multiline />
+              </ScrollView>
 
-                <View style={styles.modalFooter}>
-                  <TouchableOpacity style={styles.cancelButton} onPress={() => setEditModalVisible(false)}>
-                    <Text style={styles.cancelButtonText}>取消</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.saveButton} onPress={saveEdit}>
-                    <Text style={styles.saveButtonText}>保存</Text>
-                  </TouchableOpacity>
-                </View>
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => setEditModalVisible(false)}>
+                  <Text style={styles.cancelButtonText}>取消</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.saveButton} onPress={saveEdit}>
+                  <Text style={styles.saveButtonText}>保存</Text>
+                </TouchableOpacity>
               </View>
             </View>
-          </KeyboardAvoidingView>
-        </TouchableWithoutFeedback>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </Screen>
   );
@@ -492,12 +544,13 @@ function ModeButton({ icon, label, active, onPress }: { icon: string; label: str
 }
 
 // 编辑字段
-function EditField({ label, value, onChange, multiline, keyboardType }: {
+function EditField({ label, value, onChange, multiline, keyboardType, placeholder }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   multiline?: boolean;
   keyboardType?: 'numeric' | 'default';
+  placeholder?: string;
 }) {
   return (
     <View style={styles.editField}>
@@ -508,9 +561,129 @@ function EditField({ label, value, onChange, multiline, keyboardType }: {
         onChangeText={onChange}
         multiline={multiline}
         keyboardType={keyboardType}
-        placeholder={`请输入${label}`}
+        placeholder={placeholder || `请输入${label}`}
         placeholderTextColor={COLORS.placeholder}
       />
+    </View>
+  );
+}
+
+// 日期选择字段
+function EditDateField({ label, value, onChange }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [show, setShow] = useState(false);
+  
+  const handleChange = (event: any, selectedDate?: Date) => {
+    setShow(Platform.OS === 'ios');
+    if (selectedDate) {
+      const formatted = selectedDate.toISOString().split('T')[0];
+      onChange(formatted);
+    }
+  };
+
+  return (
+    <View style={styles.editField}>
+      <Text style={styles.editLabel}>{label}</Text>
+      <TouchableOpacity 
+        style={styles.pickerInput} 
+        onPress={() => setShow(true)}
+      >
+        <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>
+          {value || '请选择日期'}
+        </Text>
+        <Ionicons name="calendar-outline" size={20} color={COLORS.textSecondary} />
+      </TouchableOpacity>
+      {show && (
+        <DateTimePicker
+          value={value ? new Date(value) : new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleChange}
+        />
+      )}
+    </View>
+  );
+}
+
+// 时间选择字段
+function EditTimeField({ label, value, onChange }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [show, setShow] = useState(false);
+  
+  const handleChange = (event: any, selectedDate?: Date) => {
+    setShow(Platform.OS === 'ios');
+    if (selectedDate) {
+      const hours = selectedDate.getHours().toString().padStart(2, '0');
+      const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+      onChange(`${hours}:${minutes}`);
+    }
+  };
+
+  // 解析时间字符串为 Date 对象
+  const parseTimeToDate = (timeStr: string): Date => {
+    const date = new Date();
+    if (timeStr) {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      if (!isNaN(hours) && !isNaN(minutes)) {
+        date.setHours(hours, minutes, 0, 0);
+      }
+    }
+    return date;
+  };
+
+  return (
+    <View style={styles.editField}>
+      <Text style={styles.editLabel}>{label}</Text>
+      <TouchableOpacity 
+        style={styles.pickerInput} 
+        onPress={() => setShow(true)}
+      >
+        <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>
+          {value || '请选择时间'}
+        </Text>
+        <Ionicons name="time-outline" size={20} color={COLORS.textSecondary} />
+      </TouchableOpacity>
+      {show && (
+        <DateTimePicker
+          value={parseTimeToDate(value)}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleChange}
+        />
+      )}
+    </View>
+  );
+}
+
+// 选择器字段
+function EditSelectField({ label, value, options, onChange }: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <View style={styles.editField}>
+      <Text style={styles.editLabel}>{label}</Text>
+      <View style={styles.selectRow}>
+        {options.map((option) => (
+          <TouchableOpacity
+            key={option}
+            style={[styles.selectOption, value === option && styles.selectOptionActive]}
+            onPress={() => onChange(value === option ? '' : option)}
+          >
+            <Text style={[styles.selectOptionText, value === option && styles.selectOptionTextActive]}>
+              {option}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 }
@@ -748,6 +921,49 @@ const styles = {
     color: COLORS.textPrimary,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  pickerInput: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    backgroundColor: COLORS.surface,
+    borderRadius: 4,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  pickerText: {
+    fontSize: 15,
+    color: COLORS.textPrimary,
+  },
+  pickerPlaceholder: {
+    fontSize: 15,
+    color: COLORS.placeholder,
+  },
+  selectRow: {
+    flexDirection: 'row' as const,
+    gap: 10,
+  },
+  selectOption: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 4,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center' as const,
+  },
+  selectOptionActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  selectOptionText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: '500' as const,
+  },
+  selectOptionTextActive: {
+    color: '#FFF',
   },
   modalFooter: {
     flexDirection: 'row' as const,

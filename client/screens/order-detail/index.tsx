@@ -9,9 +9,9 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
@@ -129,9 +129,55 @@ export default function OrderDetailScreen() {
     fetchOrderDetail();
   }, [fetchOrderDetail]);
 
+  // 计算送站时间备注
+  const calculateTimeRemark = (pickupType: string, station: string, trainTime: string): string => {
+    if (pickupType !== '送站' || !trainTime) return '';
+    
+    const [hours, minutes] = trainTime.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return '';
+    
+    const trainDate = new Date();
+    trainDate.setHours(hours, minutes, 0, 0);
+    
+    // 判断场站类型：机场还是火车站
+    const isAirport = station.includes('机场');
+    const isStation = station.includes('站');
+    
+    let pickupDate = new Date(trainDate);
+    if (isAirport) {
+      // 机场提前3小时
+      pickupDate.setHours(pickupDate.getHours() - 3);
+    } else if (isStation) {
+      // 火车站提前2小时
+      pickupDate.setHours(pickupDate.getHours() - 2);
+    } else {
+      // 默认提前2小时
+      pickupDate.setHours(pickupDate.getHours() - 2);
+    }
+    
+    const pickupHours = pickupDate.getHours().toString().padStart(2, '0');
+    const pickupMinutes = pickupDate.getMinutes().toString().padStart(2, '0');
+    return pickupHours + ':' + pickupMinutes;
+  };
+
   // 更新表单字段
   const updateField = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      // 当接送站、场站或班次时间变化时，自动计算时间备注
+      if (field === 'pickup_type' || field === 'station' || field === 'train_time') {
+        const pickupType = field === 'pickup_type' ? value : prev.pickup_type;
+        const station = field === 'station' ? value : prev.station;
+        const trainTime = field === 'train_time' ? value : prev.train_time;
+        
+        if (pickupType === '送站' && station && trainTime) {
+          newData.time_remark = calculateTimeRemark(pickupType, station, trainTime);
+        }
+      }
+      
+      return newData;
+    });
     setEdited(true);
   };
 
@@ -315,7 +361,7 @@ export default function OrderDetailScreen() {
             {/* 基本信息 */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>基本信息</Text>
-              <FormInput label="时间" value={formData.order_date} placeholder="YYYY-MM-DD"
+              <FormDateInput label="时间" value={formData.order_date}
                 onChange={(v) => updateField('order_date', v)} />
               <FormInput label="团号" value={formData.group_no} placeholder="请输入团号"
                 onChange={(v) => updateField('group_no', v)} />
@@ -332,9 +378,9 @@ export default function OrderDetailScreen() {
               <Text style={styles.sectionTitle}>班次信息</Text>
               <FormInput label="班次" value={formData.train_no} placeholder="如：CZ8929"
                 onChange={(v) => updateField('train_no', v)} />
-              <FormInput label="班次时间" value={formData.train_time} placeholder="如：15:30"
+              <FormTimeInput label="班次时间" value={formData.train_time}
                 onChange={(v) => updateField('train_time', v)} />
-              <FormInput label="时间备注" value={formData.time_remark} placeholder="请输入时间备注"
+              <FormInput label="时间备注" value={formData.time_remark} placeholder="送站时自动计算"
                 onChange={(v) => updateField('time_remark', v)} />
             </View>
 
@@ -411,6 +457,92 @@ function FormInput({ label, value, placeholder, onChange, multiline, keyboardTyp
         multiline={multiline}
         keyboardType={keyboardType || 'default'}
       />
+    </View>
+  );
+}
+
+// 日期选择输入组件
+function FormDateInput({ label, value, onChange }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [show, setShow] = useState(false);
+  
+  const handleChange = (event: any, selectedDate?: Date) => {
+    setShow(Platform.OS === 'ios');
+    if (selectedDate) {
+      const formatted = selectedDate.toISOString().split('T')[0];
+      onChange(formatted);
+    }
+  };
+
+  return (
+    <View style={styles.formField}>
+      <Text style={styles.formLabel}>{label}</Text>
+      <TouchableOpacity style={styles.pickerInput} onPress={() => setShow(true)}>
+        <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>
+          {value || '请选择日期'}
+        </Text>
+        <Ionicons name="calendar-outline" size={20} color={COLORS.textSecondary} />
+      </TouchableOpacity>
+      {show && (
+        <DateTimePicker
+          value={value ? new Date(value) : new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleChange}
+        />
+      )}
+    </View>
+  );
+}
+
+// 时间选择输入组件
+function FormTimeInput({ label, value, onChange }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [show, setShow] = useState(false);
+  
+  const handleChange = (event: any, selectedDate?: Date) => {
+    setShow(Platform.OS === 'ios');
+    if (selectedDate) {
+      const hours = selectedDate.getHours().toString().padStart(2, '0');
+      const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+      onChange(`${hours}:${minutes}`);
+    }
+  };
+
+  const parseTimeToDate = (timeStr: string): Date => {
+    const date = new Date();
+    if (timeStr) {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      if (!isNaN(hours) && !isNaN(minutes)) {
+        date.setHours(hours, minutes, 0, 0);
+      }
+    }
+    return date;
+  };
+
+  return (
+    <View style={styles.formField}>
+      <Text style={styles.formLabel}>{label}</Text>
+      <TouchableOpacity style={styles.pickerInput} onPress={() => setShow(true)}>
+        <Text style={value ? styles.pickerText : styles.pickerPlaceholder}>
+          {value || '请选择时间'}
+        </Text>
+        <Ionicons name="time-outline" size={20} color={COLORS.textSecondary} />
+      </TouchableOpacity>
+      {show && (
+        <DateTimePicker
+          value={parseTimeToDate(value)}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleChange}
+        />
+      )}
     </View>
   );
 }
@@ -511,6 +643,24 @@ const styles = {
     color: COLORS.textPrimary,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  pickerInput: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    backgroundColor: COLORS.surface,
+    borderRadius: 4,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  pickerText: {
+    fontSize: 14,
+    color: COLORS.textPrimary,
+  },
+  pickerPlaceholder: {
+    fontSize: 14,
+    color: COLORS.placeholder,
   },
   saveButton: {
     backgroundColor: COLORS.primary,
