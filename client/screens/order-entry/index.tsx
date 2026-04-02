@@ -200,9 +200,16 @@ export default function OrderEntryScreen() {
       });
       const result = await response.json();
       if (result.success) {
-        Alert.alert('成功', `成功录入 ${result.count} 条订单`, [
-          { text: '查看订单', onPress: () => router.replace('/order-list') },
-        ]);
+        if (Platform.OS === 'web') {
+          // Web 端：直接提示并跳转
+          window.alert(`成功录入 ${result.count} 条订单`);
+          router.replace('/order-list');
+        } else {
+          // 移动端：显示 Alert 后跳转
+          Alert.alert('成功', `成功录入 ${result.count} 条订单`, [
+            { text: '查看订单', onPress: () => router.replace('/order-list') },
+          ]);
+        }
       } else {
         throw new Error(result.error);
       }
