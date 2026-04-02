@@ -298,11 +298,14 @@ export default function OrderListScreen() {
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}>
         {/* 今日统计卡片 */}
         <TouchableOpacity onPress={toggleTodayFilter} activeOpacity={0.8}>
-          <View style={[styles.statsCard, isFilteredToday && { backgroundColor: COLORS.primaryDark }]}>
+          <View style={[
+            styles.statsCard, 
+            isFilteredToday ? { backgroundColor: COLORS.primaryDark } : { backgroundColor: '#4A6FA5' }
+          ]}>
             <View style={styles.statsContent}>
-              <Text style={styles.statsLabel}>{isFilteredToday ? '当前筛选' : '今日订单数'}</Text>
-              <Text style={styles.statsNumber}>{isFilteredToday ? orders.length : todayStats.totalOrders}</Text>
-              <Text style={styles.statsDate}>{isFilteredToday ? '点击查看全部' : todayStats.date}</Text>
+              <Text style={styles.statsLabel}>今日订单数</Text>
+              <Text style={styles.statsNumber}>{todayStats.totalOrders}</Text>
+              <Text style={styles.statsDate}>{todayStats.date}</Text>
             </View>
             <View style={styles.statsIcon}>
               <Ionicons name="clipboard-outline" size={32} color={COLORS.accent} />
