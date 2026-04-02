@@ -744,17 +744,17 @@ function FilterDateInput({ value, onChange }: {
     }
   };
 
-  // Web 端使用原生 input
+  // Web 端使用原生 input（自带日历图标）
   if (Platform.OS === 'web') {
     return (
       <View style={{ marginBottom: 0 }}>
-        <View style={[styles.filterInput, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }]}>
+        <View style={[styles.filterInput, { paddingVertical: 8 }]}>
           <input
             type="date"
             value={value}
             onChange={(e) => onChange(e.target.value)}
             style={{
-              flex: 1,
+              width: '100%',
               borderWidth: 0,
               backgroundColor: 'transparent',
               fontSize: 14,
@@ -763,7 +763,6 @@ function FilterDateInput({ value, onChange }: {
               padding: 0,
             }}
           />
-          <Ionicons name="calendar-outline" size={18} color={COLORS.textSecondary} />
         </View>
       </View>
     );

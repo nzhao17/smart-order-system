@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -470,7 +470,6 @@ function FormDateInput({ label, value, onChange }: {
   onChange: (v: string) => void;
 }) {
   const [show, setShow] = useState(false);
-  const inputRef = useRef<any>(null);
 
   const handleChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS !== 'ios') {
@@ -482,14 +481,13 @@ function FormDateInput({ label, value, onChange }: {
     }
   };
 
-  // Web 端使用原生 input
+  // Web 端使用原生 input（自带日历图标）
   if (Platform.OS === 'web') {
     return (
       <View style={styles.formField}>
         <Text style={styles.formLabel}>{label}</Text>
         <View style={styles.pickerInput}>
           <input
-            ref={inputRef}
             type="date"
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -503,7 +501,6 @@ function FormDateInput({ label, value, onChange }: {
               padding: 0,
             }}
           />
-          <Ionicons name="calendar-outline" size={20} color={COLORS.textSecondary} />
         </View>
       </View>
     );
@@ -565,7 +562,7 @@ function FormTimeInput({ label, value, onChange }: {
     return date;
   };
 
-  // Web 端使用原生 input
+  // Web 端使用原生 input（自带时钟图标）
   if (Platform.OS === 'web') {
     return (
       <View style={styles.formField}>
@@ -585,7 +582,6 @@ function FormTimeInput({ label, value, onChange }: {
               padding: 0,
             }}
           />
-          <Ionicons name="time-outline" size={20} color={COLORS.textSecondary} />
         </View>
       </View>
     );

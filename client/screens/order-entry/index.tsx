@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -584,7 +584,7 @@ function EditDateField({ label, value, onChange }: {
     }
   };
 
-  // Web 端使用原生 input
+  // Web 端使用原生 input（自带日历图标）
   if (Platform.OS === 'web') {
     return (
       <View style={styles.editField}>
@@ -604,7 +604,6 @@ function EditDateField({ label, value, onChange }: {
               padding: 0,
             }}
           />
-          <Ionicons name="calendar-outline" size={20} color={COLORS.textSecondary} />
         </View>
       </View>
     );
@@ -667,7 +666,7 @@ function EditTimeField({ label, value, onChange }: {
     return date;
   };
 
-  // Web 端使用原生 input
+  // Web 端使用原生 input（自带时钟图标）
   if (Platform.OS === 'web') {
     return (
       <View style={styles.editField}>
@@ -687,7 +686,6 @@ function EditTimeField({ label, value, onChange }: {
               padding: 0,
             }}
           />
-          <Ionicons name="time-outline" size={20} color={COLORS.textSecondary} />
         </View>
       </View>
     );
