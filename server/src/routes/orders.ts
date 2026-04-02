@@ -1,6 +1,8 @@
 import express from 'express';
 import type { Request, Response } from 'express';
-import { getSupabaseClient } from '../storage/database/supabase-client';
+import { getDb } from '../storage/database/db';
+import { orders } from '../storage/database/shared/schema';
+import { eq, ilike, gte, lte, desc, asc, and, or, sql } from 'drizzle-orm';
 import type { Order, InsertOrder } from '../storage/database/shared/schema';
 
 const router = express.Router();
@@ -8,28 +10,10 @@ const router = express.Router();
 /**
  * 获取订单列表
  * GET /api/v1/orders
- * Query 参数：
- * - date_from: 开始日期 (YYYY-MM-DD)
- * - date_to: 结束日期 (YYYY-MM-DD)
- * - group_no: 团号筛选
- * - station: 场站筛选
- * - pickup_type: 接送站筛选
- * - dispatcher: 调度筛选
- * - driver: 司机筛选
- * - train_no: 班次筛选
- * - train_time: 班次时间筛选
- * - time_remark: 时间备注筛选
- * - guest_name: 客人姓名筛选
- * - phone: 手机号筛选
- * - people_count: 人数筛选
- * - hotel: 宾馆筛选
- * - page: 页码（默认1）
- * - pageSize: 每页数量（默认20）
- * - sortOrder: 排序方向，asc=升序，desc=降序（默认desc）
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const client = getSupabaseClient();
+    const db = getDb();
     const {
       date_from, date_to, group_no, station, pickup_type, dispatcher, driver,
       train_no, train_time, time_remark, guest_name, phone, people_count, hotel,
@@ -41,63 +25,69 @@ router.get('/', async (req: Request, res: Response) => {
     const offset = (pageNum - 1) * pageSizeNum;
     const isAscending = sortOrder === 'asc';
 
-    // 按时间排序
-    let query = client
-      .from('orders')
-      .select('*', { count: 'exact' })
-      .order('order_date', { ascending: isAscending })
-      .order('created_at', { ascending: isAscending })
-      .range(offset, offset + pageSizeNum - 1);
-
-    // 筛选条件
+    // 构建筛选条件
+    const conditions = [];
+    
     if (date_from) {
-      query = query.gte('order_date', date_from);
+      conditions.push(gte(orders.order_date, date_from as string));
     }
     if (date_to) {
-      query = query.lte('order_date', date_to);
+      conditions.push(lte(orders.order_date, date_to as string));
     }
     if (group_no) {
-      query = query.ilike('group_no', `%${group_no}%`);
+      conditions.push(ilike(orders.group_no, `%${group_no}%`));
     }
     if (station) {
-      query = query.ilike('station', `%${station}%`);
+      conditions.push(ilike(orders.station, `%${station}%`));
     }
     if (pickup_type) {
-      query = query.eq('pickup_type', pickup_type);
+      conditions.push(eq(orders.pickup_type, pickup_type as string));
     }
     if (dispatcher) {
-      query = query.ilike('dispatcher', `%${dispatcher}%`);
+      conditions.push(ilike(orders.dispatcher, `%${dispatcher}%`));
     }
     if (driver) {
-      query = query.ilike('driver', `%${driver}%`);
+      conditions.push(ilike(orders.driver, `%${driver}%`));
     }
     if (train_no) {
-      query = query.ilike('train_no', `%${train_no}%`);
+      conditions.push(ilike(orders.train_no, `%${train_no}%`));
     }
     if (train_time) {
-      query = query.ilike('train_time', `%${train_time}%`);
+      conditions.push(ilike(orders.train_time, `%${train_time}%`));
     }
     if (time_remark) {
-      query = query.ilike('time_remark', `%${time_remark}%`);
+      conditions.push(ilike(orders.time_remark, `%${time_remark}%`));
     }
     if (guest_name) {
-      query = query.ilike('guest_name', `%${guest_name}%`);
+      conditions.push(ilike(orders.guest_name, `%${guest_name}%`));
     }
     if (phone) {
-      query = query.ilike('phone', `%${phone}%`);
+      conditions.push(ilike(orders.phone, `%${phone}%`));
     }
     if (people_count) {
-      query = query.eq('people_count', parseInt(people_count as string));
+      conditions.push(eq(orders.people_count, parseInt(people_count as string)));
     }
     if (hotel) {
-      query = query.ilike('hotel', `%${hotel}%`);
+      conditions.push(ilike(orders.hotel, `%${hotel}%`));
     }
 
-    const { data, error, count } = await query;
+    // 查询总数
+    const countResult = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(orders)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
+    
+    const total = countResult[0]?.count || 0;
 
-    if (error) {
-      throw new Error(`查询订单失败: ${error.message}`);
-    }
+    // 查询数据
+    const orderDirection = isAscending ? asc : desc;
+    const data = await db
+      .select()
+      .from(orders)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(orderDirection(orders.order_date), orderDirection(orders.created_at))
+      .limit(pageSizeNum)
+      .offset(offset);
 
     res.json({
       success: true,
@@ -105,8 +95,8 @@ router.get('/', async (req: Request, res: Response) => {
       pagination: {
         page: pageNum,
         pageSize: pageSizeNum,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / pageSizeNum),
+        total: total,
+        totalPages: Math.ceil(total / pageSizeNum),
       },
     });
   } catch (err) {
@@ -121,23 +111,21 @@ router.get('/', async (req: Request, res: Response) => {
  */
 router.get('/stats/today', async (req: Request, res: Response) => {
   try {
-    const client = getSupabaseClient();
+    const db = getDb();
     const today = new Date().toISOString().split('T')[0];
 
-    const { count, error } = await client
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .eq('order_date', today);
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(orders)
+      .where(eq(orders.order_date, today));
 
-    if (error) {
-      throw new Error(`获取统计失败: ${error.message}`);
-    }
+    const count = result[0]?.count || 0;
 
     res.json({
       success: true,
       data: {
         date: today,
-        totalOrders: count || 0,
+        totalOrders: count,
       },
     });
   } catch (err) {
@@ -152,24 +140,25 @@ router.get('/stats/today', async (req: Request, res: Response) => {
  */
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const client = getSupabaseClient();
-    const { id } = req.params;
+    const db = getDb();
+    const idParam = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const id = parseInt(idParam || '');
 
-    const { data, error } = await client
-      .from('orders')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-
-    if (error) {
-      throw new Error(`查询订单失败: ${error.message}`);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, error: '无效的订单ID' });
     }
 
-    if (!data) {
+    const result = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, id))
+      .limit(1);
+
+    if (result.length === 0) {
       return res.status(404).json({ success: false, error: '订单不存在' });
     }
 
-    res.json({ success: true, data: data as Order });
+    res.json({ success: true, data: result[0] as Order });
   } catch (err) {
     console.error('获取订单详情失败:', err);
     res.status(500).json({ success: false, error: (err as Error).message });
@@ -179,24 +168,18 @@ router.get('/:id', async (req: Request, res: Response) => {
 /**
  * 创建订单
  * POST /api/v1/orders
- * Body: InsertOrder
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const client = getSupabaseClient();
+    const db = getDb();
     const orderData: InsertOrder = req.body;
 
-    const { data, error } = await client
-      .from('orders')
-      .insert(orderData)
-      .select()
-      .single();
+    const result = await db
+      .insert(orders)
+      .values(orderData)
+      .returning();
 
-    if (error) {
-      throw new Error(`创建订单失败: ${error.message}`);
-    }
-
-    res.json({ success: true, data: data as Order });
+    res.json({ success: true, data: result[0] as Order });
   } catch (err) {
     console.error('创建订单失败:', err);
     res.status(500).json({ success: false, error: (err as Error).message });
@@ -206,27 +189,22 @@ router.post('/', async (req: Request, res: Response) => {
 /**
  * 批量创建订单
  * POST /api/v1/orders/batch
- * Body: { orders: InsertOrder[] }
  */
 router.post('/batch', async (req: Request, res: Response) => {
   try {
-    const client = getSupabaseClient();
-    const { orders } = req.body;
+    const db = getDb();
+    const { orders: orderList } = req.body;
 
-    if (!Array.isArray(orders) || orders.length === 0) {
+    if (!Array.isArray(orderList) || orderList.length === 0) {
       return res.status(400).json({ success: false, error: '请提供订单数据' });
     }
 
-    const { data, error } = await client
-      .from('orders')
+    const result = await db
       .insert(orders)
-      .select();
+      .values(orderList)
+      .returning();
 
-    if (error) {
-      throw new Error(`批量创建订单失败: ${error.message}`);
-    }
-
-    res.json({ success: true, data: data as Order[], count: data?.length || 0 });
+    res.json({ success: true, data: result as Order[], count: result.length });
   } catch (err) {
     console.error('批量创建订单失败:', err);
     res.status(500).json({ success: false, error: (err as Error).message });
@@ -236,26 +214,29 @@ router.post('/batch', async (req: Request, res: Response) => {
 /**
  * 更新订单
  * PUT /api/v1/orders/:id
- * Body: Partial<InsertOrder>
  */
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const client = getSupabaseClient();
-    const { id } = req.params;
+    const db = getDb();
+    const idParam = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const id = parseInt(idParam || '');
     const updateData = { ...req.body, updated_at: new Date().toISOString() };
 
-    const { data, error } = await client
-      .from('orders')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      throw new Error(`更新订单失败: ${error.message}`);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, error: '无效的订单ID' });
     }
 
-    res.json({ success: true, data: data as Order });
+    const result = await db
+      .update(orders)
+      .set(updateData)
+      .where(eq(orders.id, id))
+      .returning();
+
+    if (result.length === 0) {
+      return res.status(404).json({ success: false, error: '订单不存在' });
+    }
+
+    res.json({ success: true, data: result[0] as Order });
   } catch (err) {
     console.error('更新订单失败:', err);
     res.status(500).json({ success: false, error: (err as Error).message });
@@ -268,16 +249,21 @@ router.put('/:id', async (req: Request, res: Response) => {
  */
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const client = getSupabaseClient();
-    const { id } = req.params;
+    const db = getDb();
+    const idParam = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const id = parseInt(idParam || '');
 
-    const { error } = await client
-      .from('orders')
-      .delete()
-      .eq('id', id);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, error: '无效的订单ID' });
+    }
 
-    if (error) {
-      throw new Error(`删除订单失败: ${error.message}`);
+    const result = await db
+      .delete(orders)
+      .where(eq(orders.id, id))
+      .returning();
+
+    if (result.length === 0) {
+      return res.status(404).json({ success: false, error: '订单不存在' });
     }
 
     res.json({ success: true, message: '订单已删除' });
