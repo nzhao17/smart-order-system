@@ -295,6 +295,15 @@ export default function OrderEntryScreen() {
     return timeStr.replace(/\s*\+[\d:]+$/, '');
   };
 
+  // 安全返回 - 如果没有上一页则返回首页
+  const handleGoBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
+  };
+
   // 重置表单
   const resetForm = () => {
     setTextInput('');
@@ -307,7 +316,7 @@ export default function OrderEntryScreen() {
     <Screen style={{ backgroundColor: COLORS.background }}>
       {/* 顶部导航栏 */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color={COLORS.primary} />
           <Text style={styles.backText}>返回</Text>
         </TouchableOpacity>

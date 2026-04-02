@@ -298,6 +298,15 @@ export default function OrderListScreen() {
     return Object.values(filters).some(v => v !== '');
   };
 
+  // 安全返回 - 如果没有上一页则返回首页
+  const handleGoBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
+  };
+
   // 一键复制筛选结果
   const copyOrdersToClipboard = async () => {
     if (orders.length === 0) {
@@ -346,7 +355,7 @@ export default function OrderListScreen() {
     <Screen style={{ backgroundColor: COLORS.background }}>
       {/* 顶部导航栏 */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color={COLORS.primary} />
           <Text style={styles.backText}>返回</Text>
         </TouchableOpacity>
