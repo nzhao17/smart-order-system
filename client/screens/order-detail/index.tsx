@@ -186,31 +186,51 @@ export default function OrderDetailScreen() {
   const handleDelete = () => {
     if (!order) return;
     
-    Alert.alert('确认删除', '确定要删除这条订单吗？', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '删除',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const response = await fetch(
-              `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/orders/${order.id}`,
-              { method: 'DELETE' }
-            );
-            const result = await response.json();
-            if (result.success) {
-              Alert.alert('成功', '订单已删除', [
-                { text: '确定', onPress: () => router.back() }
-              ]);
-            } else {
-              throw new Error(result.error);
-            }
-          } catch {
-            Alert.alert('错误', '删除失败');
-          }
+    // Web 端使用 confirm，移动端使用 Alert
+    if (Platform.OS === 'web') {
+      if (window.confirm('确定要删除这条订单吗？')) {
+        performDelete();
+      }
+    } else {
+      Alert.alert('确认删除', '确定要删除这条订单吗？', [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: () => performDelete(),
         },
-      },
-    ]);
+      ]);
+    }
+  };
+
+  // 执行删除操作
+  const performDelete = async () => {
+    if (!order) return;
+    try {
+      const response = await fetch(
+        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/orders/${order.id}`,
+        { method: 'DELETE' }
+      );
+      const result = await response.json();
+      if (result.success) {
+        if (Platform.OS === 'web') {
+          window.alert('订单已删除');
+          router.back();
+        } else {
+          Alert.alert('成功', '订单已删除', [
+            { text: '确定', onPress: () => router.back() }
+          ]);
+        }
+      } else {
+        throw new Error(result.error);
+      }
+    } catch {
+      if (Platform.OS === 'web') {
+        window.alert('删除失败');
+      } else {
+        Alert.alert('错误', '删除失败');
+      }
+    }
   };
 
   // 加载中状态

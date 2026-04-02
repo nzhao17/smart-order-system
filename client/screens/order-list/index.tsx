@@ -162,32 +162,49 @@ export default function OrderListScreen() {
 
   // 删除订单
   const deleteOrder = (id: number) => {
-    Alert.alert('确认删除', '确定要删除这条订单吗？', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '删除',
-        style: 'destructive',
-        onPress: async () => {
-          setDeletingId(id);
-          try {
-            const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/orders/${id}`, {
-              method: 'DELETE',
-            });
-            const result = await response.json();
-            if (result.success) {
-              setOrders(orders.filter(o => o.id !== id));
-              fetchTodayStats();
-            } else {
-              throw new Error(result.error);
-            }
-          } catch (err) {
-            Alert.alert('删除失败', (err as Error).message);
-          } finally {
-            setDeletingId(null);
-          }
+    // Web 端使用 confirm，移动端使用 Alert
+    if (Platform.OS === 'web') {
+      if (window.confirm('确定要删除这条订单吗？')) {
+        performDelete(id);
+      }
+    } else {
+      Alert.alert('确认删除', '确定要删除这条订单吗？', [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: () => performDelete(id),
         },
-      },
-    ]);
+      ]);
+    }
+  };
+
+  // 执行删除操作
+  const performDelete = async (id: number) => {
+    setDeletingId(id);
+    try {
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/orders/${id}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      if (result.success) {
+        setOrders(orders.filter(o => o.id !== id));
+        fetchTodayStats();
+        if (Platform.OS === 'web') {
+          window.alert('删除成功');
+        }
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      if (Platform.OS === 'web') {
+        window.alert('删除失败: ' + (err as Error).message);
+      } else {
+        Alert.alert('删除失败', (err as Error).message);
+      }
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   // 点击今日订单筛选/取消筛选
