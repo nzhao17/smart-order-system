@@ -335,12 +335,16 @@ export default function OrderEntryScreen() {
         <View style={{ width: 70 }} />
       </View>
 
-      {/* PC端：左右分栏布局；移动端：单列布局 */}
-      <View style={[styles.mainContainer, isLargeScreen && { maxWidth, alignSelf: 'center' }]}>
+      {/* PC端：有解析结果时左右分栏，无解析结果时单列居中 */}
+      <View style={[
+        styles.mainContainer,
+        isLargeScreen && { maxWidth, alignSelf: 'center' },
+        isLargeScreen && parsedOrders.length === 0 && styles.mainContainerCenter
+      ]}>
         {/* 左侧输入区 */}
         <View style={[
           styles.inputSection, 
-          isLargeScreen && (parsedOrders.length > 0 ? styles.inputSectionPC : styles.inputSectionPCFull)
+          isLargeScreen && parsedOrders.length > 0 && styles.inputSectionPC
         ]}>
           <ScrollView
             contentContainerStyle={{ paddingHorizontal: isLargeScreen ? 24 : 20, paddingTop: 16, paddingBottom: 100 }}
@@ -786,6 +790,10 @@ const styles = {
     flex: 1,
     flexDirection: 'row' as const,
   },
+  mainContainerCenter: {
+    flexDirection: 'column' as const,
+    justifyContent: 'center' as const,
+  },
   inputSection: {
     flex: 1,
   },
@@ -793,10 +801,6 @@ const styles = {
     maxWidth: 480,
     borderRightWidth: 1,
     borderRightColor: COLORS.border,
-  },
-  inputSectionPCFull: {
-    maxWidth: 600,
-    marginHorizontal: 'auto' as const,
   },
   resultSection: {
     display: 'none' as const,
