@@ -18,6 +18,7 @@ import { useFocusEffect } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Screen } from '@/components/Screen';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
 
@@ -79,6 +80,8 @@ interface Filters {
 export default function OrderListScreen() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
+  const { isLargeScreen, getMaxWidth } = useResponsive();
+  const maxWidth = getMaxWidth('wide');
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -363,7 +366,7 @@ export default function OrderListScreen() {
         <View style={{ width: 70 }} />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={[{ paddingHorizontal: isLargeScreen ? 24 : 20, paddingTop: 16, paddingBottom: 100 }, isLargeScreen && { maxWidth, alignSelf: 'center', width: '100%' }]}>
         {/* 今日统计卡片 */}
         <TouchableOpacity onPress={toggleTodayFilter} activeOpacity={0.8}>
           <View style={[
@@ -493,8 +496,8 @@ export default function OrderListScreen() {
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { paddingBottom: insets.bottom + 24 }]}>
+          <View style={[styles.modalOverlay, isLargeScreen && styles.modalOverlayPC]}>
+            <View style={[styles.modalContent, { paddingBottom: insets.bottom + 24 }, isLargeScreen && styles.modalContentPC]}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>筛选条件</Text>
                 <TouchableOpacity onPress={() => setFilterVisible(false)}>
@@ -1008,11 +1011,20 @@ const styles = {
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end' as const,
   },
+  modalOverlayPC: {
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
   modalContent: {
     backgroundColor: COLORS.card,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: '85%' as const,
+  },
+  modalContentPC: {
+    borderRadius: 16,
+    width: 500,
+    maxWidth: '90%' as const,
   },
   modalHeader: {
     flexDirection: 'row' as const,

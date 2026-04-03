@@ -15,6 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
 
@@ -60,6 +61,9 @@ interface Order {
 export default function OrderDetailScreen() {
   const { id } = useSafeSearchParams<{ id: number }>();
   const router = useSafeRouter();
+  const { isLargeScreen, getMaxWidth } = useResponsive();
+  const maxWidth = getMaxWidth('medium');
+  
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -145,7 +149,7 @@ export default function OrderDetailScreen() {
     const isAirport = station.includes('机场');
     const isStation = station.includes('站');
     
-    let pickupDate = new Date(trainDate);
+    const pickupDate = new Date(trainDate);
     if (isAirport) {
       // 机场提前3小时
       pickupDate.setHours(pickupDate.getHours() - 3);
@@ -346,7 +350,7 @@ export default function OrderDetailScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}
+          contentContainerStyle={[{ paddingHorizontal: isLargeScreen ? 24 : 20, paddingTop: 16, paddingBottom: 100 }, isLargeScreen && { maxWidth, alignSelf: 'center', width: '100%' }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >

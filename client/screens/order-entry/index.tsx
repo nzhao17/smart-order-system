@@ -19,6 +19,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Screen } from '@/components/Screen';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createFormDataFile } from '@/utils';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
 
@@ -60,6 +61,9 @@ type InputMode = 'text' | 'image' | 'excel';
 
 export default function OrderEntryScreen() {
   const router = useSafeRouter();
+  const { isLargeScreen, getMaxWidth } = useResponsive();
+  const maxWidth = getMaxWidth('wide');
+  
   const [inputMode, setInputMode] = useState<InputMode>('text');
   const [textInput, setTextInput] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -234,7 +238,7 @@ export default function OrderEntryScreen() {
     const isAirport = station.includes('机场');
     const isStation = station.includes('站');
     
-    let pickupDate = new Date(trainDate);
+    const pickupDate = new Date(trainDate);
     if (isAirport) {
       // 机场提前3小时
       pickupDate.setHours(pickupDate.getHours() - 3);
@@ -331,12 +335,16 @@ export default function OrderEntryScreen() {
         <View style={{ width: 70 }} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* 输入方式选择 */}
-        <View style={styles.modeContainer}>
+      {/* PC端：左右分栏布局；移动端：单列布局 */}
+      <View style={[styles.mainContainer, isLargeScreen && { maxWidth, alignSelf: 'center' }]}>
+        {/* 左侧输入区 */}
+        <View style={[styles.inputSection, isLargeScreen && styles.inputSectionPC]}>
+          <ScrollView
+            contentContainerStyle={{ paddingHorizontal: isLargeScreen ? 24 : 20, paddingTop: 16, paddingBottom: 100 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* 输入方式选择 */}
+            <View style={styles.modeContainer}>
           <ModeButton
             icon="text"
             label="文本粘贴"
@@ -423,9 +431,18 @@ export default function OrderEntryScreen() {
             </>
           )}
         </TouchableOpacity>
+      </ScrollView>
+    </View>
 
-        {/* 解析结果 */}
-        {parsedOrders.length > 0 && (
+    {/* 右侧结果区 - PC端显示；移动端显示在下方 */}
+    {(isLargeScreen || parsedOrders.length > 0) && (
+      <View style={[styles.resultSection, isLargeScreen && styles.resultSectionPC]}>
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: isLargeScreen ? 24 : 20, paddingTop: 16, paddingBottom: 100 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* 解析结果 */}
+          {parsedOrders.length > 0 && (
           <View style={styles.resultCard}>
             <View style={styles.resultHeader}>
               <Text style={styles.resultTitle}>识别结果 ({parsedOrders.length}条)</Text>
@@ -478,8 +495,11 @@ export default function OrderEntryScreen() {
               )}
             </TouchableOpacity>
           </View>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      </View>
+    )}
+  </View>
 
       {/* 编辑弹窗 */}
       <Modal visible={editModalVisible} transparent animationType="slide">
@@ -487,8 +507,8 @@ export default function OrderEntryScreen() {
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+          <View style={[styles.modalOverlay, isLargeScreen && styles.modalOverlayPC]}>
+            <View style={[styles.modalContent, isLargeScreen && styles.modalContentPC]}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>编辑订单信息</Text>
                 <TouchableOpacity onPress={() => setEditModalVisible(false)}>
@@ -761,6 +781,26 @@ function EditSelectField({ label, value, options, onChange }: {
 }
 
 const styles = {
+  mainContainer: {
+    flex: 1,
+    flexDirection: 'row' as const,
+  },
+  inputSection: {
+    flex: 1,
+  },
+  inputSectionPC: {
+    maxWidth: 480,
+    borderRightWidth: 1,
+    borderRightColor: COLORS.border,
+  },
+  resultSection: {
+    display: 'none' as const,
+  },
+  resultSectionPC: {
+    display: 'flex' as const,
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
   header: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
@@ -952,11 +992,20 @@ const styles = {
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end' as const,
   },
+  modalOverlayPC: {
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
   modalContent: {
     backgroundColor: COLORS.card,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: '85%' as const,
+  },
+  modalContentPC: {
+    borderRadius: 16,
+    width: 500,
+    maxHeight: '80%' as const,
   },
   modalHeader: {
     flexDirection: 'row' as const,

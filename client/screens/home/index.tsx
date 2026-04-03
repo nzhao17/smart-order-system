@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { useResponsive } from '@/hooks/useResponsive';
 
 // 商务风格配色
 const COLORS = {
@@ -19,50 +20,53 @@ const COLORS = {
 
 export default function HomeScreen() {
   const router = useSafeRouter();
+  const { isLargeScreen, getMaxWidth } = useResponsive();
+
+  const maxWidth = getMaxWidth('narrow');
 
   return (
     <Screen style={styles.container}>
       {/* 主内容区域 */}
-      <View style={styles.content}>
+      <View style={[styles.content, isLargeScreen && { maxWidth, alignSelf: 'center' }]}>
         {/* 标题区域 */}
-        <View style={styles.headerSection}>
+        <View style={[styles.headerSection, isLargeScreen && { marginBottom: 48 }]}>
           <View style={styles.decorativeLine} />
-          <Text style={styles.title}>智能录单系统</Text>
+          <Text style={[styles.title, isLargeScreen && { fontSize: 36 }]}>智能录单系统</Text>
           <View style={styles.decorativeLine} />
         </View>
 
-        {/* 功能按钮区域 */}
-        <View style={styles.buttonContainer}>
+        {/* 功能按钮区域 - PC端横向排列 */}
+        <View style={[styles.buttonContainer, isLargeScreen && styles.buttonContainerPC]}>
           {/* 订单录入按钮 */}
           <TouchableOpacity
-            style={styles.primaryButton}
+            style={[styles.primaryButton, isLargeScreen && styles.buttonPC]}
             activeOpacity={0.9}
             onPress={() => router.push('/order-entry')}
           >
-            <View style={styles.buttonIconWrapper}>
-              <Ionicons name="add-circle-outline" size={32} color={COLORS.textLight} />
+            <View style={[styles.buttonIconWrapper, isLargeScreen && { width: 48, height: 48, borderRadius: 24 }]}>
+              <Ionicons name="add-circle-outline" size={isLargeScreen ? 28 : 32} color={COLORS.textLight} />
             </View>
-            <Text style={styles.primaryButtonText}>订单录入</Text>
+            <Text style={[styles.primaryButtonText, isLargeScreen && { fontSize: 16 }]}>订单录入</Text>
             <Text style={styles.buttonSubtext}>文本 · 图片 · Excel</Text>
           </TouchableOpacity>
 
           {/* 订单统计按钮 */}
           <TouchableOpacity
-            style={styles.secondaryButton}
+            style={[styles.secondaryButton, isLargeScreen && styles.buttonPC]}
             activeOpacity={0.9}
             onPress={() => router.push('/order-list')}
           >
-            <View style={styles.secondaryIconWrapper}>
-              <Ionicons name="stats-chart-outline" size={32} color={COLORS.primary} />
+            <View style={[styles.secondaryIconWrapper, isLargeScreen && { width: 48, height: 48, borderRadius: 24 }]}>
+              <Ionicons name="stats-chart-outline" size={isLargeScreen ? 28 : 32} color={COLORS.primary} />
             </View>
-            <Text style={styles.secondaryButtonText}>订单统计</Text>
+            <Text style={[styles.secondaryButtonText, isLargeScreen && { fontSize: 16 }]}>订单统计</Text>
             <Text style={styles.secondarySubtext}>筛选 · 详情 · 导出</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* 底部装饰 */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, isLargeScreen && { maxWidth, alignSelf: 'center' }]}>
         <View style={styles.footerLine} />
         <Text style={styles.footerText}>北京心鑫相连科技有限公司 2026</Text>
         <View style={styles.footerLine} />
@@ -81,6 +85,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
+    width: '100%',
   },
   headerSection: {
     alignItems: 'center',
@@ -103,6 +108,11 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 20,
   },
+  buttonContainerPC: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
+  },
   primaryButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 4,
@@ -114,6 +124,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 6,
+  },
+  buttonPC: {
+    minWidth: 200,
+    paddingVertical: 24,
+    paddingHorizontal: 40,
+    flex: 1,
+    maxWidth: 280,
   },
   buttonIconWrapper: {
     width: 56,
@@ -177,6 +194,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingBottom: 40,
     paddingHorizontal: 32,
+    width: '100%',
   },
   footerLine: {
     flex: 1,
