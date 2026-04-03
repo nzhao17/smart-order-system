@@ -2,11 +2,11 @@ import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
 import * as XLSX from 'xlsx';
 import type { InsertOrder } from '../storage/database/shared/schema';
 
-// 从环境变量读取配置，确保 SDK 使用正确的 API 端点
+// 从环境变量读取配置，使用 SDK 期望的变量名
 const config = new Config({
-  apiKey: process.env.COZE_API_KEY,
-  baseUrl: process.env.COZE_BASE_URL || 'https://api.coze.cn/v1',
-  modelBaseUrl: process.env.COZE_MODEL_BASE_URL || 'https://api.coze.cn/v1',
+  apiKey: process.env.COZE_WORKLOAD_IDENTITY_API_KEY,
+  baseUrl: process.env.COZE_INTEGRATION_BASE_URL,
+  modelBaseUrl: process.env.COZE_INTEGRATION_MODEL_BASE_URL,
 });
 
 /**
