@@ -196,7 +196,7 @@ export async function parseImageToOrder(imageBase64: string): Promise<InsertOrde
   ];
 
   const response = await client.invoke(messages, {
-    model: 'doubao-seed-1-6-vision-250815',
+    model: 'glm-4v-flash',  // 智谱AI视觉模型
     temperature: 0.1
   });
   const content = response.content.trim();
