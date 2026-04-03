@@ -338,7 +338,10 @@ export default function OrderEntryScreen() {
       {/* PC端：左右分栏布局；移动端：单列布局 */}
       <View style={[styles.mainContainer, isLargeScreen && { maxWidth, alignSelf: 'center' }]}>
         {/* 左侧输入区 */}
-        <View style={[styles.inputSection, isLargeScreen && styles.inputSectionPC]}>
+        <View style={[
+          styles.inputSection, 
+          isLargeScreen && (parsedOrders.length > 0 ? styles.inputSectionPC : styles.inputSectionPCFull)
+        ]}>
           <ScrollView
             contentContainerStyle={{ paddingHorizontal: isLargeScreen ? 24 : 20, paddingTop: 16, paddingBottom: 100 }}
             keyboardShouldPersistTaps="handled"
@@ -434,15 +437,14 @@ export default function OrderEntryScreen() {
       </ScrollView>
     </View>
 
-    {/* 右侧结果区 - PC端显示；移动端显示在下方 */}
-    {(isLargeScreen || parsedOrders.length > 0) && (
+    {/* 右侧结果区 - 只在有解析结果时显示 */}
+    {parsedOrders.length > 0 && (
       <View style={[styles.resultSection, isLargeScreen && styles.resultSectionPC]}>
         <ScrollView
           contentContainerStyle={{ paddingHorizontal: isLargeScreen ? 24 : 20, paddingTop: 16, paddingBottom: 100 }}
           keyboardShouldPersistTaps="handled"
         >
           {/* 解析结果 */}
-          {parsedOrders.length > 0 && (
           <View style={styles.resultCard}>
             <View style={styles.resultHeader}>
               <Text style={styles.resultTitle}>识别结果 ({parsedOrders.length}条)</Text>
@@ -495,7 +497,6 @@ export default function OrderEntryScreen() {
               )}
             </TouchableOpacity>
           </View>
-          )}
         </ScrollView>
       </View>
     )}
@@ -792,6 +793,10 @@ const styles = {
     maxWidth: 480,
     borderRightWidth: 1,
     borderRightColor: COLORS.border,
+  },
+  inputSectionPCFull: {
+    maxWidth: 600,
+    marginHorizontal: 'auto' as const,
   },
   resultSection: {
     display: 'none' as const,
