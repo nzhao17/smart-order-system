@@ -220,7 +220,7 @@ router.put('/:id', async (req: Request, res: Response) => {
     const db = getDb();
     const idParam = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const id = parseInt(idParam || '');
-    const updateData = { ...req.body, updated_at: new Date().toISOString() };
+    const updateData = { ...req.body, updated_at: new Date() };
 
     if (isNaN(id)) {
       return res.status(400).json({ success: false, error: '无效的订单ID' });
