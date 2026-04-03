@@ -121,7 +121,7 @@ export async function parseTextToOrder(text: string): Promise<InsertOrder[]> {
     { role: 'user' as const, content: text },
   ];
 
-  const response = await client.invoke(messages, { temperature: 0.1 });
+  const response = await client.invoke(messages, { model: 'glm-4-flash', temperature: 0.1 });
   const content = response.content.trim();
 
   try {
